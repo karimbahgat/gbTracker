@@ -9,13 +9,13 @@ API-only for receiving, storing, and sharing data on boundary changes.
   - name
   - code_type
   - code
-  - parent: Another boundaryReference. At least one required to reference the toplevel country. 
+  - parent: Another boundaryReference. At least one required to reference the toplevel country, or zero if this is the toplevel. 
 
 ## Change types
 
 - `boundarySnapshot`: A snapshot of what a boundary looked like at some point.
   - event: The temporal event during which this change occurred.
-  - boundary_ref
+  - boundary_ref: A `BoundaryReference` instance.
   - geom: WKB/GeoJSON geometry definition.
   - source_type: Either a file reference or a map reference.
   - source: Link to the file or map object.
@@ -65,4 +65,3 @@ Here are some recipes for events that can be captured using different combinatio
   - The same number of `boundaryDissolve` entries.
 - Boundary dissolved (boundary ceases to exist):
   - A single `boundaryDissolve` entry.
-
