@@ -22,8 +22,52 @@
         </p>
         <ul class="actions">
             <li><a href="" class="button big">Explore the Data</a></li>
-            <li><a href="" class="button big">Get Involved</a></li>
+            <li><a href="#getting-involved" class="button big">Get Involved</a></li>
         </ul>
+    </div>
+</section>
+
+
+
+
+<!-- Getting involved -->
+<style>
+    .row-feature {
+        display:flex;
+        flex-direction:row;
+        align-items:top;
+    }
+    .row-feature-icon {
+    }
+    .row-feature-icon img {
+        height:200px;
+        border-radius:50%;
+    }
+    .row-feature-content {
+        margin:10px;
+    }
+</style>
+
+<section>
+    <header class="major">
+        <h2 id="getting-involved">Getting involved</h2>
+    </header>
+    <div>
+        <div class="row-feature">
+            <div class="row-feature-icon">
+                <img src="{% static 'images/boundarydata.png' %}"/>
+            </div>
+            <div class="row-feature-content">
+                <h3>Upload boundary data</h3>
+                <p>
+                    Uploading boundary data and associated temporal metadata 
+                    helps by providing an "anchor point" or a <b>snapshot</b> of what a set of
+                    boundaries looked like <b>at a given point in time</b>. This is useful
+                    to reconstruct how boundaries have changed over time. 
+                </p>
+                <a href="{% url 'import_shapefile' %}" class="button big">Upload now</a>
+            </div>
+        </div>
     </div>
 </section>
 
