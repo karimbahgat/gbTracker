@@ -8,6 +8,14 @@ class BoundaryReference(models.Model):
     parent = models.ForeignKey('BoundaryReference', related_name='children', on_delete=models.PROTECT, 
                                 blank=True, null=True)
 
+    def get_nested(self):
+        refs = [self]
+        cur = self
+        while cur.parent:
+            cur = cur.parent
+            refs.append(cur)
+        return refs
+
 class BoundaryName(models.Model):
     boundary_ref = models.ForeignKey('BoundaryReference', related_name='names', on_delete=models.CASCADE)
     name = models.CharField(max_length=100)

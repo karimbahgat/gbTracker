@@ -21,11 +21,52 @@
             the only requirement for use is <a href="index.html#citation">acknowledgement</a>.
         </p>
         <ul class="actions">
-            <li><a href="" class="button big">Explore the Data</a></li>
+            <li><a href="#explore-data" class="button big">Explore the Data</a></li>
             <li><a href="#getting-involved" class="button big">Get Involved</a></li>
         </ul>
     </div>
 </section>
+
+
+
+
+<!-- Explore the data -->
+<section>
+    <header class="major">
+        <h2 id="explore-data">Explore the data</h2>
+    </header>
+    <div>
+        <p>
+            Below you can browse and explore the raw data registered for each country.
+        </p>
+        <div style="height:400px; overflow:auto">
+            <table style="width:100%">
+                <thead>
+                    <th>Date</th>
+                    <th>Boundary</th>
+                    <th>Type</th>
+                    <th>Source</th>
+                </thead>
+                <tbody>
+                    {% for snap in snapshots %}
+                        <tr>
+                            <td>{{ snap.event.date_start }}-{{ snap.event.date_end }}</td>
+                            <td>
+                                {% for ref in snap.boundary_ref.get_nested %}
+                                    {{ ref.names.all.0.name }} 
+                                    {% if not forloop.last %} / {% endif %}
+                                {% endfor %}
+                            </td>
+                            <td>Snapshot</td>
+                            <td>{{ snap.source }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
 
 
 
