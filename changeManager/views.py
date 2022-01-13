@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.http import JsonResponse
-from django.forms.models import model_to_dict
+from django.forms.models import fields_for_model, model_to_dict
 
 from . import models
 
@@ -8,21 +8,91 @@ from . import models
 
 # API
 
+def _parse_date(dateval):
+    '''Can be a year, year-month, or year-month-day'''
+    if '/' in dateval:
+        # from and to datestrings
+        fromdate,todate = dateval.split('/')
+        fromdate,todate = fromdate.strip(),todate.strip()
+        if fromdate and todate:
+            start1,end1 = _parse_date(fromdate)
+            start2,end2 = _parse_date(todate)
+            return min(start1,start2), max(end1,end2)
+        elif fromdate:
+            start,end = _parse_date(fromdate)
+            return start,None
+        elif todate:
+            start,end = _parse_date(todate)
+            return None,end
+    else:
+        # single date string
+        dateparts = dateval.split('-')
+        if len(dateparts) == 1:
+            yr = dateparts[0]
+            start = '{}-01-01'.format(yr)
+            end = '{}-12-31'.format(yr)
+        elif len(dateparts) == 2:
+            yr,mn = dateparts
+            start = '{}-{}-01'.format(yr,mn)
+            end = '{}-{}-31'.format(yr,mn)
+        elif len(dateparts) == 3:
+            start = end = dateval
+        else:
+            raise Exception('"{}" is not a valid date'.format(dateval))
+        return start,end
+
 def api_snapshots(request):
     if request.method == 'GET':
         # get one or more snapshots based on params
         print(request.GET)
         search = request.GET.get('search', None)
+        datesearch = request.GET.get('date', None)
         if search:
-            # filter by search term
-            # match refs by name
-            refs = models.BoundaryReference.objects.filter(names__name__istartswith=search)
+            # build hierarchical search terms (lowest to highest)
+            terms = [s.strip() for s in search.split(',') if s.strip()]
+            # find all refs matching the lowest term (at any level)
+            refs = models.BoundaryReference.objects.filter(names__name__istartswith=terms[0])
+            # calc match score by adding parent filters based on additional search terms
+            ref_scores = {}
+            for ref in refs:
+                if len(terms) > 1:
+                    # hierarchical search terms
+                    parent_matches = [1]
+                    for t in terms[1:]:
+                        _matches = [n.name.lower().startswith(t.lower())
+                                        for parent in ref.get_all_parents(include_self=False)
+                                        for n in parent.names.all()]
+                        has_match = 1 if any(_matches) else 0
+                        parent_matches.append(has_match)
+                    max_score = max(len(terms), len(parent_matches))
+                    score = sum(parent_matches) / max_score
+                else:
+                    # single search term
+                    score = 1
+                ref_scores[ref.id] = score
             # get any snapshot belonging to the matched refs or its immediate parent
-            matches = models.BoundarySnapshot.objects.filter(boundary_ref__in=refs) | models.BoundarySnapshot.objects.filter(boundary_ref__parent__in=refs)
+            kwargs = {}
+            if datesearch:
+                start,end = _parse_date(datesearch)
+                if start:
+                    kwargs['event__date_end__gte'] = start
+                if end:
+                    kwargs['event__date_start__lte'] = end
+            matches = models.BoundarySnapshot.objects.filter(boundary_ref__in=refs, **kwargs) | models.BoundarySnapshot.objects.filter(boundary_ref__parent__in=refs, **kwargs)
+            matches = sorted(matches, key=lambda snap: max([ref_scores.get(par.id,0) for par in snap.boundary_ref.get_all_parents()]), reverse=True)
             count = len(matches)
         else:
-            # no filtering, get all snapshots
-            matches = models.BoundarySnapshot.objects.all()
+            # no name filtering, get all snapshots
+            if datesearch:
+                start,end = _parse_date(datesearch)
+                kwargs = {}
+                if start:
+                    kwargs['event__date_end__gte'] = start
+                if end:
+                    kwargs['event__date_start__lte'] = end
+                matches = models.BoundarySnapshot.objects.filter(**kwargs)
+            else:
+                matches = models.BoundarySnapshot.objects.all()
             count = matches.count()
         # paginate (for now just return first 20)
         matches = matches[:20]

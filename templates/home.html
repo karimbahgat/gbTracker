@@ -41,7 +41,8 @@
             Below you can browse and explore the raw data registered for each country.
         </p>
         <div id="rawdata-params" style="display:flex; flex-direction:row">
-            <input type="text" name="search" placeholder="Filter boundary name" autocomplete="off" oninput="fetchBoundaryData()">
+            <input type="text" name="date" placeholder="Filter by time period" autocomplete="off" oninput="fetchBoundaryData()" style="width:30%">
+            <input type="text" name="search" placeholder="Filter by boundary name" autocomplete="off" oninput="fetchBoundaryData()">
             <button type="button" onclick="fetchBoundaryData()">Filter</button>
         </div>
         <span id="search-status" style="margin-left:10px"></span>

@@ -8,7 +8,7 @@ class BoundaryReference(models.Model):
     parent = models.ForeignKey('BoundaryReference', related_name='children', on_delete=models.PROTECT, 
                                 blank=True, null=True)
 
-    def get_all_parents(self):
+    def get_all_parents(self, include_self=True):
         '''Returns a list of all parents, starting with and including self.'''
         refs = [self]
         cur = self
