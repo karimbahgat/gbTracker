@@ -8,13 +8,40 @@ class BoundaryReference(models.Model):
     parent = models.ForeignKey('BoundaryReference', related_name='children', on_delete=models.PROTECT, 
                                 blank=True, null=True)
 
-    def get_nested(self):
+    def get_all_parents(self):
+        '''Returns a list of all parents, starting with and including self.'''
         refs = [self]
         cur = self
         while cur.parent:
             cur = cur.parent
             refs.append(cur)
         return refs
+
+    #def get_all_children(self):
+    #    '''Returns a list of all parents, starting with and including self.'''
+    #    refs = [self]
+    #    cur = self
+    #    if cur.children:
+    #        refs.extend(self.children)
+    #    return refs
+
+    """
+    def match_references(self):
+        '''Returns a list of matching boundary_refs based on either the name or code of self.
+        Each match is returned along with given a match score.
+        '''
+        matches = BoundaryReference.objects.filter(names__name=self.names)
+        return matches
+
+    def match_snapshots(self):
+        '''Returns a list of matching snapshots based on either the name or code of self.
+        Each match is returned along with given a match score.
+        '''
+        print('names',self.names)
+        matches = BoundarySnapshot.objects.filter(boundary_ref__names__name=self.names)
+        print('matches',matches)
+        return matches
+    """
 
 class BoundaryName(models.Model):
     boundary_ref = models.ForeignKey('BoundaryReference', related_name='names', on_delete=models.CASCADE)

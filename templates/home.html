@@ -30,6 +30,7 @@
 
 
 
+
 <!-- Explore the data -->
 <section>
     <header class="major">
@@ -39,8 +40,13 @@
         <p>
             Below you can browse and explore the raw data registered for each country.
         </p>
-        <div style="height:400px; overflow:auto">
-            <table style="width:100%">
+        <div id="rawdata-params" style="display:flex; flex-direction:row">
+            <input type="text" name="search" placeholder="Filter boundary name" autocomplete="off" oninput="fetchBoundaryData()">
+            <button type="button" onclick="fetchBoundaryData()">Filter</button>
+        </div>
+        <span id="search-status" style="margin-left:10px"></span>
+        <div style="height:400px; overflow:auto; margin-top:20px">
+            <table id="rawdata-table" style="width:100%">
                 <thead>
                     <th>Date</th>
                     <th>Boundary</th>
@@ -48,24 +54,93 @@
                     <th>Source</th>
                 </thead>
                 <tbody>
-                    {% for snap in snapshots %}
-                        <tr>
-                            <td>{{ snap.event.date_start }}-{{ snap.event.date_end }}</td>
-                            <td>
-                                {% for ref in snap.boundary_ref.get_nested %}
-                                    {{ ref.names.all.0.name }} 
-                                    {% if not forloop.last %} / {% endif %}
-                                {% endfor %}
-                            </td>
-                            <td>Snapshot</td>
-                            <td>{{ snap.source }}</td>
-                        </tr>
-                    {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
 </section>
+
+<script>
+    // simple get/post data function
+    // https://medium.com/meta-box/how-to-send-get-and-post-requests-with-javascript-fetch-api-d0685b7ee6ed
+    const request = ( url, params = {}, method = 'GET' ) => {
+        let options = {
+            method
+        };
+        if ( 'GET' === method ) {
+            url += '?' + ( new URLSearchParams( params ) ).toString();
+        } else {
+            options.body = JSON.stringify( params );
+        }
+        
+        return fetch( url, options );
+    };
+
+    function fetchBoundaryData() {
+        // clear results
+        document.getElementById('search-status').innerHTML = 'Loading data...';
+        tbody = document.querySelector('#rawdata-table tbody');
+        tbody.innerHTML = '';
+        // get user params
+        params = {}
+        inputs = document.getElementById('rawdata-params').querySelectorAll('input');
+        for (elem of inputs) {
+            params[elem.name] = elem.value;
+        };
+        console.log(params)
+        // fetch data from api
+        url = "{% url 'api_snapshots' %}";
+        request(url, params, 'GET')
+            .then(response => response.json())
+            .then(data => populateBoundaryTable(data));
+    };
+
+    function populateBoundaryTable(data) {
+        // clear results again
+        if (data.count == 0) {
+            showing = 0;
+        } else {
+            showing = `1-${data.results.length}`;
+        };
+        document.getElementById('search-status').innerHTML = `Showing ${showing} of ${data.count}`;
+        tbody = document.querySelector('#rawdata-table tbody');
+        tbody.innerHTML = '';
+        // populate table
+        console.log(data);
+        tbody = document.querySelector('#rawdata-table tbody');
+        for (snap of data.results) {
+            tr = document.createElement('tr');
+            tbody.appendChild(tr);
+
+            // date
+            td = document.createElement('td');
+            tr.appendChild(td);
+            td.innerHTML = snap.event.date_start + ' &rarr; ' + snap.event.date_end;
+
+            // full name hierarchy
+            td = document.createElement('td');
+            tr.appendChild(td);
+            names = [];
+            for (ref of snap.boundary_refs) {
+                names.push(ref.names[0]);
+            };
+            td.innerText = names.join(' / ');
+
+            // type
+            td = document.createElement('td');
+            tr.appendChild(td);
+            td.innerText = 'Snapshot';
+
+            // source
+            td = document.createElement('td');
+            tr.appendChild(td);
+            td.innerText = snap.source;
+        };
+    };
+
+    fetchBoundaryData();
+
+</script>
 
 
 
