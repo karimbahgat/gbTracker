@@ -1,10 +1,21 @@
+from django.http.response import HttpResponse
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.forms.models import fields_for_model, model_to_dict
 
 from . import models
 
+import json
+
 # Create your views here.
+
+def snapshot(request, pk):
+    '''View of a snapshot instance.'''
+    snap = models.BoundarySnapshot.objects.get(pk=pk)
+    geom = snap.geom.__geo_interface__
+    geoj = {'type':'Feature', 'geometry':geom}
+    context = {'snapshot':snap, 'geojson':json.dumps(geoj)}
+    return render(request, 'snapshot.html', context)
 
 # API
 
@@ -40,6 +51,24 @@ def _parse_date(dateval):
         else:
             raise Exception('"{}" is not a valid date'.format(dateval))
         return start,end
+
+def api_snapshot(request, pk):
+    if request.method == 'GET':
+        snap = models.BoundarySnapshot.objects.get(pk=pk)
+        
+        # serialize
+        def serialize_snapshot(m):
+            boundary_refs = [{'id':p.id, 'names':[n.name for n in p.names.all()]}
+                            for p in m.boundary_ref.get_all_parents()]
+            return {'event':model_to_dict(m.event),
+                    'boundary_refs':boundary_refs,
+                    'source':m.source,
+                    }
+        data = serialize_snapshot(snap)
+
+        # return as json
+        resp = JsonResponse(data)
+        return resp
 
 def api_snapshots(request):
     if request.method == 'GET':
@@ -100,7 +129,8 @@ def api_snapshots(request):
         def serialize_snapshot(m):
             boundary_refs = [{'id':p.id, 'names':[n.name for n in p.names.all()]}
                             for p in m.boundary_ref.get_all_parents()]
-            return {'event':model_to_dict(m.event),
+            return {'id':m.id,
+                    'event':model_to_dict(m.event),
                     'boundary_refs':boundary_refs,
                     'source':m.source,
                     }

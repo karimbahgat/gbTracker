@@ -53,6 +53,7 @@
                     <th>Boundary</th>
                     <th>Type</th>
                     <th>Source</th>
+                    <th></th>
                 </thead>
                 <tbody>
                 </tbody>
@@ -136,6 +137,15 @@
             td = document.createElement('td');
             tr.appendChild(td);
             td.innerText = snap.source;
+
+            // view button
+            td = document.createElement('td');
+            tr.appendChild(td);
+            but = document.createElement('a');
+            td.appendChild(but);
+            but.className = "button small";
+            but.href = `/snapshots/${snap.id}/`
+            but.innerText = 'View';
         };
     };
 

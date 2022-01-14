@@ -1,0 +1,108 @@
+{% extends "templates/base.html" %}
+
+{% load static %}
+
+{% block page_content %}
+
+<script src="{% static 'js/ol.js' %}"></script>
+<link rel="stylesheet" href="{% static 'css/ol.css' %}" type="text/css">
+
+<!-- Snapshot info -->
+<style>
+    #map-and-info {
+        display: flex;
+        flex-direction: row;
+        gap: 10px;
+    }
+    #map {
+        width: 100%; 
+        height: 400px;
+    }
+    #info {
+        width: 60%;
+        height: 400px;
+    }
+</style>
+
+<section>
+    <div class="content">
+        <header>
+            <h1>Boundary snapshot</h1>
+            <p>
+                {% for ref in snapshot.boundary_ref.get_all_parents reversed %}
+                    <a href="">{{ ref.names.all.0.name }}</a>
+                    {% if not forloop.last %}
+                    &rarr;
+                    {% endif %}
+                {% endfor %}
+            </p>
+        </header>
+        <div>
+            <div id="map-and-info">
+                <div id="map">
+                </div>
+                <div id="info" class="box">
+                    <h3>Names</h3>
+                    <p>
+                        {% for name in snapshot.boundary_ref.names.all %}
+                            {{ name.name }}
+                            {% if not forloop.last %}
+                            ,
+                            {% endif %}
+                        {% endfor %}
+                    </p>
+
+                    <h3>Identifiers</h3>
+                    <p>[None]</p>
+
+                    <h3>Date</h3>
+                    <p>{{ snapshot.event.date_start }} &rarr; {{ snapshot.event.date_end }}</p>
+                    
+                    <h3>Source</h3>
+                    <p>{{ snapshot.source }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    // layer
+    var layer = new ol.layer.Vector({
+        source: new ol.source.Vector(),
+        //style: style,
+    });
+
+    // data
+    geojsonData = {{ geojson|safe }};
+    feat = new ol.format.GeoJSON().readFeature(geojsonData, {dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857'})
+    layer.getSource().addFeature(feat);
+
+    // map
+    var map = new ol.Map({
+        target: 'map',
+        controls: ol.control.defaults().extend([new ol.control.FullScreen(),
+                                                new ol.control.ScaleLine({units: 'metric'}),
+                                                ]),
+        layers: [
+        new ol.layer.Tile({
+            source: new ol.source.XYZ({
+                attributions: 'Satellite Imagery <a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> ',
+                url:
+                'https://api.maptiler.com/tiles/satellite/{z}/{x}/{y}.jpg?key=' + 'aknzJQRnZg32XVVPrcYH',
+                maxZoom: 20,
+                crossOrigin: 'anonymous' // necessary for converting map to img during pdf generation: https://stackoverflow.com/questions/66671183/how-to-export-map-image-in-openlayer-6-without-cors-problems-tainted-canvas-iss
+            })}),
+            layer,
+        ],
+        view: new ol.View({
+            center: ol.proj.fromLonLat([0,0]),
+            zoom: 1
+        })
+    });
+
+    map.getView().fit(layer.getSource().getExtent());
+
+</script>
+
+{% endblock %}
