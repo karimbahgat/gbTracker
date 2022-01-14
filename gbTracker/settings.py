@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     # apps
     'changeManager',
     'dataImporter',
+    'boundaryBuilder',
 ]
 
 MIDDLEWARE = [
