@@ -9,10 +9,7 @@
 
 <!-- Snapshot info -->
 <style>
-    header {
-        width: 100%;
-    }
-    #map-and-info {
+    #map-div {
         display: flex;
         flex-direction: row;
         gap: 10px;
@@ -21,57 +18,46 @@
         width: 100%; 
         height: 400px;
     }
-    #info {
-        width: 60%;
-        height: 400px;
+    .boundary-div {
+        width: 100%;
     }
 </style>
 
 <section>
     <div class="content">
         <header>
-            <h1>Boundary snapshot</h1>
+            <h1>Boundary builder</h1>
             <p>
-                {% for ref in snapshot.boundary_ref.get_all_parents reversed %}
-                    <a href="">{{ ref.names.all.0.name }}</a>
-                    {% if not forloop.last %}
-                    &rarr;
-                    {% endif %}
-                {% endfor %}
+                Brief instructions here... 
             </p>
         </header>
         <div>
-            <div id="map-and-info">
+            <h2>Title - Event date...</h2>
+            <div id="map-div">
                 <div id="map">
                 </div>
-                <div id="info" class="box">
-                    <h3>Names</h3>
-                    <p>
-                        {% for name in snapshot.boundary_ref.names.all %}
+            </div>
+        </div>
+        
+        <br>
+
+        <div id="boundaries">
+            <h2>Changes</h2>
+            {% for b in boundaries %}
+                <div class="boundary-div box">
+                    <h3>
+                        {% for name in b.object.boundary_ref.names.all %}
                             {{ name.name }}
                             {% if not forloop.last %}
                             ,
                             {% endif %}
                         {% endfor %}
-                    </p>
+                    </h3>
 
-                    <h3>Identifiers</h3>
-                    <p>[None]</p>
+                    <p>Some stuff goes here...</p>
 
-                    <h3>Date</h3>
-                    <p>{{ snapshot.event.date_start }} &rarr; {{ snapshot.event.date_end }}</p>
-                    
-                    <h3>Source</h3>
-                    <p>{{ snapshot.source }}</p>
                 </div>
-            </div>
-            <div id="timeline">
-                <a class="button big" href="{% url 'build' %}?anchors={{ snapshot.id }}" style="float:right">Boundary Builder</a>
-                <h2>Timeline</h2>
-                <div id="timeline-data">
-                    Timeline of snapshots and changes goes here.
-                </div>
-            </div>
+            {% endfor %}
         </div>
     </div>
 </section>
@@ -84,9 +70,16 @@
     });
 
     // data
-    geojsonData = {{ geojson|safe }};
-    feat = new ol.format.GeoJSON().readFeature(geojsonData, {dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857'})
-    layer.getSource().addFeature(feat);
+    geojsonData = {'type':'FeatureCollection',
+                    'features':[]};
+
+    {% for b in boundaries %}
+    feat = {{ b.geojson|safe }};
+    geojsonData.features.push(feat);
+    {% endfor %}
+
+    feats = new ol.format.GeoJSON().readFeatures(geojsonData, {dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857'})
+    layer.getSource().addFeatures(feats);
 
     // map
     var map = new ol.Map({

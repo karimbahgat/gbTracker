@@ -19,5 +19,5 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    #path('api/snapshots', views.api_snapshots, name='api_snapshots'),
+    path('build', views.build, name='build'),
 ]
