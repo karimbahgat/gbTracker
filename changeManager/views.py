@@ -123,8 +123,8 @@ def api_snapshots(request):
             else:
                 matches = models.BoundarySnapshot.objects.all()
             count = matches.count()
-        # paginate (for now just return first 20)
-        matches = matches[:20]
+        # paginate (for now just return first X)
+        matches = matches[:100]
         # serialize
         def serialize_snapshot(m):
             boundary_refs = [{'id':p.id, 'names':[n.name for n in p.names.all()]}

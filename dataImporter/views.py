@@ -1,5 +1,9 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.db import transaction
+from django.views.decorators.csrf import csrf_exempt
+
+import os
+import csv
 
 from changeManager import models
 
@@ -9,6 +13,7 @@ from changeManager import models
 #    '''Create snapshots for all features belonging to a particular parent'''
 #    fdsfsdf
 
+@csrf_exempt
 def import_from_shapefile(request):
     if request.method == 'GET':
         return render(request, 'shapefile_import.html')
@@ -17,7 +22,27 @@ def import_from_shapefile(request):
         import shapefile
         import tempfile
 
+        # required post args:
+        # - date
+        # - name_field (str or list)
+        # - iso or iso_field: shortcut to lookup name for level 0
+
         print('POST', request.POST)
+
+        # load country data
+        iso2_to_3 = {}
+        iso3_to_name = {}
+        name_to_iso3 = {}
+        filedir = os.path.dirname(__file__)
+        with open(os.path.join(filedir, 'scripts/countries_codes_and_coordinates.csv'), encoding='utf8', newline='') as f:
+            csvreader = csv.DictReader(f)
+            for row in csvreader:
+                name = row['Country'].strip().strip('"')
+                iso2 = row['Alpha-2 code'].strip().strip('"')
+                iso3 = row['Alpha-3 code'].strip().strip('"')
+                iso2_to_3[iso2] = iso3
+                iso3_to_name[iso3] = name
+                name_to_iso3[name] = iso3
         
         # stream uploaded zipfile to disk (to avoid memory crash)
         input_name,fobj = list(request.FILES.items())[0]
@@ -55,27 +80,60 @@ def import_from_shapefile(request):
             event = models.Event(date_start=start, date_end=end)
             event.save()
 
+            # get source
+            source = request.POST.getlist('source')
+            if isinstance(source, list):
+                source = '|'.join(source)
+
             # read shapefile from temporary zipfile
             # (name_field is a list of one or more name_field inputs from a form)
-            reader = shapefile.Reader(temppath)
+            zipfile_file = request.POST.get('zipfile_file', None)
+            if zipfile_file:
+                zipfile_file = zipfile_file.strip('/')
+                temppath = os.path.join(temppath, zipfile_file)
+            reader_opts = {}
+            encoding = request.POST.get('encoding', None)
+            if encoding:
+                reader_opts['encoding'] = encoding
+
+            reader = shapefile.Reader(temppath, **reader_opts)
             for feat in reader.iterShapeRecords():
                 # create name references
                 parent = None
-                for name_field in request.POST.getlist('name_field'):
+                iso = request.POST.get('iso', '')
+                iso = iso2_to_3[iso] if len(iso)==2 else iso
+                iso_field = request.POST.get('iso_field', None)
+                names = request.POST.getlist('name')
+                name_fields = request.POST.getlist('name_field')
+
+                assert len(names) == len(name_fields)
+                assert len(names) > 0
+
+                for level,(name,name_field) in enumerate(zip(names,name_fields)):
                     # WARNING: creates multiple references to parent levels
-                    if not name_field:
-                        continue
+                    if name_field:
+                        name = feat.record[name_field]
+                    if not name:
+                        if level == 0:
+                            # iso and iso_field serve as shortcuts if ADM0 name is not given
+                            if not iso and iso_field:
+                                iso = feat.record[iso_field]
+                                iso = iso2_to_3[iso] if len(iso)==2 else iso
+                            name = iso3_to_name[iso]
                     ref = models.BoundaryReference(parent=parent)
                     ref.save()
-                    name = feat.record[name_field]
-                    name_obj = models.BoundaryName(boundary_ref=ref, name=name)
-                    name_obj.save()
+                    if name:
+                        name_obj = models.BoundaryName(boundary_ref=ref, name=name)
+                        name_obj.save()
                     parent = ref
 
                 # create snapshot
                 geom = feat.shape.__geo_interface__
-                snap = models.BoundarySnapshot(event=event, boundary_ref=ref, geom=geom, source=filename)
+                snap = models.BoundarySnapshot(event=event, boundary_ref=ref, geom=geom, source=source)
                 snap.save()
 
         # close
         temp.close()
+
+        # redirect
+        return redirect('import_shapefile')
