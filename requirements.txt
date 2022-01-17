@@ -1,1 +1,7 @@
 django==3.*
+mysqlclient==1.4.6
+dj-database-url
+python-decouple
+requests
+
+git+https://github.com/karimbahgat/django-wkb
