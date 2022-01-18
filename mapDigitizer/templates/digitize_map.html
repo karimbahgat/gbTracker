@@ -35,13 +35,15 @@
             <div id="map-input">
                 <input type="url" placeholder="URL to map image" value="{{ source }}" oninput="setImageSource(this.value)">
             </div>
+            <br>
             <div id="map-and-tools">
                 <div id="map">
                 </div>
                 <div id="tools" class="box">
-                    <button style="float:right" class="small">Add new</button>
+                    <button style="float:right" class="small">Save</button>
+                    <button style="float:right" class="small" onclick="addNewBoundary()">Add new</button>
                     <h3>Boundaries</h3>
-                    <table>
+                    <table id="boundary-table">
                         <thead>
                             <th>Name</th>
                             <th></th>
@@ -67,7 +69,7 @@
         extent: [0, 0, 10000, 10000],
     });
 
-    // map layer
+    // map image layer
     var mapLayer = new ol.layer.Image({});
     function setImageSource (url) {
         // clear old source
@@ -96,8 +98,14 @@
     testUrl = "https://www.worldatlas.com/upload/25/30/5f/regions-of-burkina-faso-map.png";
     setImageSource(testUrl);
 
+    // digitizing layer
+    var boundaryLayer = new ol.layer.Vector({
+        source: new ol.source.Vector(),
+        //style: style,
+    });
+
     // map
-    var layers = [mapLayer];
+    var layers = [mapLayer, boundaryLayer];
     var map = new ol.Map({
         target: 'map',
         controls: ol.control.defaults().extend([new ol.control.FullScreen(),
@@ -110,6 +118,52 @@
             zoom: 2
         })
     });
+
+    /////////////////////////////
+    // drawing functionality
+
+    let draw; // global so we can remove it later
+    function enableDrawInteraction() {
+        draw = new ol.interaction.Draw({
+            source: boundaryLayer.getSource(),
+            type: 'Polygon',
+        });
+        map.addInteraction(draw);
+    };
+
+    function addNewBoundary() {
+        newBoundaryRow();
+    };
+
+    function newBoundaryRow(data) {
+        tbody = document.querySelector('#boundary-table tbody');
+
+        tr = document.createElement('tr');
+        tbody.appendChild(tr);
+
+        td = document.createElement('td');
+        tr.appendChild(td);
+        td.innerHTML = '<input type="text" name="names" autocomplete="off" placeholder="Boundary name(s)">';
+
+        td = document.createElement('td');
+        tr.appendChild(td);
+        buttons = document.createElement('span');
+        td.appendChild(buttons);
+        
+        addBut = '<button class="small" onclick="editBoundaryRow()">Edit</button>'
+        buttons.innerHTML = addBut;
+        /*
+        addBut = document.createElement('button');
+        addBut.className = 'small';
+        addBut.innerHTML = 'Draw';
+        addBut.onClick = "enableDrawInteraction()";
+        buttons.appendChild(addBut);
+        */
+    };
+
+    function editBoundaryRow(but) {
+        enableDrawInteraction();
+    };
 
 </script>
 
