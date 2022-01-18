@@ -19,5 +19,5 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    #path('import_shapefile', views.import_from_shapefile, name='import_shapefile'),
+    path('digitize_map', views.digitize_map, name='digitize_map'),
 ]
