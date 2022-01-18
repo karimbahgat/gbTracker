@@ -111,8 +111,9 @@ def api_snapshots(request):
             matches = sorted(matches, key=lambda snap: max([ref_scores.get(par.id,0) for par in snap.boundary_ref.get_all_parents()]), reverse=True)
             count = len(matches)
         else:
-            # no name filtering, get all snapshots
+            # no name filtering
             if datesearch:
+                # filter by date
                 start,end = _parse_date(datesearch)
                 kwargs = {}
                 if start:
@@ -121,6 +122,7 @@ def api_snapshots(request):
                     kwargs['event__date_start__lte'] = end
                 matches = models.BoundarySnapshot.objects.filter(**kwargs)
             else:
+                # get all snapshots
                 matches = models.BoundarySnapshot.objects.all()
             count = matches.count()
         # paginate (for now just return first X)

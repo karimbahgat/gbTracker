@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'changeManager',
     'dataImporter',
     'boundaryBuilder',
+    'mapDigitizer',
 ]
 
 MIDDLEWARE = [
