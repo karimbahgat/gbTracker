@@ -173,28 +173,29 @@ def import_from_shapefile(request):
                     name = groupval
                     if not name:
                         continue
-
-                    ref = models.BoundaryReference(parent=parent)
-                    ref.save()
-
                     name_obj,created = models.BoundaryName.objects.get_or_create(name=name)
-                    ref.names.add(name_obj)
 
                     if entry['children']:
+                        # create parent node
+                        ref = models.BoundaryReference(parent=parent)
+                        ref.save()
+                        ref.names.add(name_obj)
+
                         # process all children one level deeper
                         process_entries(entry['children'], parent=ref)
 
                     else:
                         # reached leaf node
-                        # create snapshot
-                        if not len(subset) == 1: # should be only one
-                            print('WARNING: feature {} has {} entries in shapefile, skipping'.format(entry['item'][:3], len(subset)))
-                            continue
-                        i = subset[0]
-                        shape = reader.shape(i)
-                        geom = shape.__geo_interface__
-                        snap = models.BoundarySnapshot(event=event, boundary_ref=ref, geom=geom, source=source)
-                        snap.save()
+                        for i in subset:
+                            # create ref
+                            ref = models.BoundaryReference(parent=parent)
+                            ref.save()
+                            ref.names.add(name_obj)
+                            # create snapshot
+                            shape = reader.shape(i)
+                            geom = shape.__geo_interface__
+                            snap = models.BoundarySnapshot(event=event, boundary_ref=ref, geom=geom, source=source)
+                            snap.save()
 
             process_entries(data)
 
