@@ -184,18 +184,21 @@ def import_data(input_dir,
         files = {'upload': open(zipfile_path, mode='rb')}
 
         # generate metadata
+        # temp hack until all level fields are provided (only country and then lowest level)
+        names = ['', '']
+        name_fields = ['', name_field or '']
         # required:
-        names = []
-        name_fields = []
-        for lvl in range(level+1):
-            names.append('')
-            if lvl < level:
-                # intermediary levels
-                # for now we dont have info on intermediary name_field
-                name_fields.append('')
-            else:
-                # last level
-                name_fields.append(name_field or '') # None should be '', otherwise ignored in post reqest
+        #names = []
+        #name_fields = []
+        #for lvl in range(level+1):
+        #    names.append('')
+        #    if lvl < level:
+        #        # intermediary levels
+        #        # for now we dont have info on intermediary name_field
+        #        name_fields.append('')
+        #    else:
+        #        # last level
+        #        name_fields.append(name_field or '') # None should be '', otherwise ignored in post reqest
         if year:
             datestring = str(year)
         elif source_updated:

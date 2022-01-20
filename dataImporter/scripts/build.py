@@ -9,7 +9,7 @@ from datetime import datetime
 
 # params
 folder = 'C:/Users/kimok/Documents/Github/geoContrast'
-collections = ['WFP','Natural_Earth','GADM'] #['IPUMS','Other','SALB']
+collections = ['WFP','GRID3','SALB'] #['IPUMS','Other','SALB']
 isos = [] #['NOR','CHL','CAN','FRA','USA']
 replace = False
 write_meta = True

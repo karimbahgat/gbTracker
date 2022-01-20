@@ -44,6 +44,10 @@ def import_from_shapefile(request):
                 iso2_to_3[iso2] = iso3
                 iso3_to_name[iso3] = name
                 name_to_iso3[name] = iso3
+
+        # load country
+        iso = request.POST.get('iso', '')
+        iso = iso2_to_3[iso] if len(iso)==2 else iso
         
         # stream uploaded zipfile to disk (to avoid memory crash)
         input_name,fobj = list(request.FILES.items())[0]
@@ -102,38 +106,49 @@ def import_from_shapefile(request):
                 reader_opts['encoding'] = encoding
 
             # define nested shapefile groups reading
-            def iter_shapefile_groups(reader, group_field, subset=None):
-                def iterRecords():
-                    if subset:
-                        # iterate only at subset indices
-                        for i in subset:
-                            rec = reader.record(i, fields=[group_field])
-                            yield rec
-                    else:
-                        # iterate all records
-                        for rec in reader.iterRecords(fields=[group_field]):
-                            yield rec
-                # get all values of group_field
-                vals = set()
-                for rec in iterRecords():
-                    val = rec[0]
-                    vals.add(val)
-                # iterate group values
-                for groupval in sorted(vals):
-                    # yield each group value with list of index positions
-                    positions = []
+            def iter_shapefile_groups(reader, group_field=None, subset=None):
+                if group_field:
+                    # return in groups
+                    def iterRecords():
+                        if subset:
+                            # iterate only at subset indices
+                            for i in subset:
+                                rec = reader.record(i, fields=[group_field])
+                                yield rec
+                        else:
+                            # iterate all records
+                            for rec in reader.iterRecords(fields=[group_field]):
+                                yield rec
+                    # get all values of group_field with oid
+                    vals = set()
                     for rec in iterRecords():
                         val = rec[0]
-                        if val == groupval:
-                            positions.append(rec.oid)
+                        vals.add(val)
+                    # iterate group values
+                    for groupval in sorted(vals):
+                        # yield each group value with list of index positions
+                        positions = []
+                        for rec in iterRecords():
+                            val = rec[0]
+                            if val == groupval:
+                                positions.append(rec.oid)
+                        yield groupval, positions
+                else:
+                    # return only a single group of entire shapefile
+                    groupval = ''
+                    positions = list(range(len(reader)))
                     yield groupval, positions
 
             def iter_nested_shapefile_groups(reader, group_fields, level=0, subset=None):
-                # NOT FINISHED
                 # iterate through each group, depth first
                 data = []
                 group_field = group_fields[level]
                 for groupval,_subset in iter_shapefile_groups(reader, group_field, subset):
+                    # override all level 0 with a single iso country lookup
+                    if level == 0 and iso:
+                        groupval = iso3_to_name[iso]
+                    print(level,group_field,groupval,len(_subset))
+                    # item
                     item = (level, group_field, groupval, _subset)
                     if group_field != group_fields[-1]:
                         # recurse into next group_field
@@ -156,6 +171,7 @@ def import_from_shapefile(request):
             # begin reading shapefile
             import shapefile
             reader = shapefile.Reader(temppath, **reader_opts)
+            print(reader)
 
             # parse nested structure
             print('parsing shapefile nested structure')
