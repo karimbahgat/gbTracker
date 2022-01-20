@@ -90,6 +90,11 @@ DATABASES = {
                                         )
 }
 
+# https://docs.djangoproject.com/en/3.2/ref/databases/#mysql-notes
+#DATABASES['default']['OPTIONS'] = {
+#    'init_command':"SET sql_mode='STRICT_TRANS_TABLES'; SET default_storage_engine=INNODB",
+#    }
+
 
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators

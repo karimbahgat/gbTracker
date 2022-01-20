@@ -209,10 +209,10 @@ def import_from_shapefile(request):
                 names = request.POST.getlist('name')
                 name_fields = request.POST.getlist('name_field')
 
-                assert len(names) == len(name_fields)
-                assert len(names) > 0
+                #assert len(names) == len(name_fields)
+                #assert len(names) > 0
 
-                for level,(name,name_field) in enumerate(zip(names,name_fields)):
+                for level,name_field in enumerate(name_fields): #(name,name_field) in enumerate(zip(names,name_fields)):
                     # WARNING: creates multiple references to parent levels
                     if name_field:
                         name = feat.record[name_field]
@@ -226,8 +226,8 @@ def import_from_shapefile(request):
                     ref = models.BoundaryReference(parent=parent)
                     ref.save()
                     if name:
-                        name_obj = models.BoundaryName.objects.get_or_create(name=name)
-                        name_obj.save()
+                        print(level,name)
+                        name_obj,created = models.BoundaryName.objects.get_or_create(name=name)
                         ref.names.add(name_obj)
                     parent = ref
 
