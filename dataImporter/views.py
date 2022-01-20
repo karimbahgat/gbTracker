@@ -173,7 +173,7 @@ def import_from_shapefile(request):
                     name = groupval
                     if not name:
                         continue
-                    name_obj,created = models.BoundaryName.objects.get_or_create(name=name)
+                    name_obj,created = models.BoundaryName.objects.get_or_create(name__iexact=name)
 
                     if entry['children']:
                         # create parent node

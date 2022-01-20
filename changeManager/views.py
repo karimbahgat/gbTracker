@@ -81,6 +81,8 @@ def api_snapshots(request):
             terms = [s.strip() for s in search.split(',') if s.strip()]
             # find all refs matching the lowest term (at any level)
             refs = models.BoundaryReference.objects.filter(names__name__istartswith=terms[0])
+            #print(refs.query)
+            #print(refs.explain())
             # calc match score by adding parent filters based on additional search terms
             ref_scores = {}
             for ref in refs:
