@@ -239,8 +239,8 @@ def import_from_shapefile(request):
                 snap.save()
             '''
 
-        # close
-        temp.close()
+        # delete tempfile
+        os.remove(temp.name)
 
         # redirect
         return redirect('import_shapefile')
