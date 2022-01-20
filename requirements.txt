@@ -5,3 +5,5 @@ python-decouple
 requests
 
 git+https://github.com/karimbahgat/django-wkb
+shapefile==2.2.*
+shapely==1.*

@@ -7,6 +7,7 @@ from djangowkb.fields import GeometryField
 class BoundaryReference(models.Model):
     parent = models.ForeignKey('BoundaryReference', related_name='children', on_delete=models.PROTECT, 
                                 blank=True, null=True)
+    names = models.ManyToManyField('BoundaryName', related_name='boundary_refs')
 
     def get_all_parents(self, include_self=True):
         '''Returns a list of all parents, starting with and including self.'''
@@ -44,7 +45,6 @@ class BoundaryReference(models.Model):
     """
 
 class BoundaryName(models.Model):
-    boundary_ref = models.ForeignKey('BoundaryReference', related_name='names', on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
 
 #class BoundaryCode(models.Model):

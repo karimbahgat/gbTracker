@@ -31,11 +31,17 @@
                     <label>Zipfile containing a shapefile</label>
                     <div style="display:flexbox; flex-direction:row; width:100%">
                         <div id="zipfile-select-div" style="float:right; display:none">
-                            <select id="zipfile-select" type="file" style="margin:5px 0px" onchange="zipfileDropdownChanged()">
+                            <select id="zipfile-select" name="zipfile_file" type="file" style="margin:5px 0px" onchange="zipfileDropdownChanged()">
                             </select>
                         </div>
                         <input id="file-input" name="file" type="file" style="margin:5px 0px" onchange="handleFileUpload()">
                     </div>
+                </div>
+
+                <h2>Source:</h2>
+                <div class="box">
+                    <label>Name of the source dataset</label>
+                    <input type="text" name="source">
                 </div>
 
                 <div>

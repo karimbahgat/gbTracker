@@ -1,3 +1,4 @@
+import enum
 from django.shortcuts import render, redirect
 from django.db import transaction
 from django.views.decorators.csrf import csrf_exempt
@@ -87,15 +88,117 @@ def import_from_shapefile(request):
 
             # read shapefile from temporary zipfile
             # (name_field is a list of one or more name_field inputs from a form)
+
+            # get full zipfile path
             zipfile_file = request.POST.get('zipfile_file', None)
             if zipfile_file:
-                zipfile_file = zipfile_file.strip('/')
+                zipfile_file = zipfile_file.split('.zip')[-1].strip('/')
                 temppath = os.path.join(temppath, zipfile_file)
+
+            # get shapefile encoding
             reader_opts = {}
             encoding = request.POST.get('encoding', None)
             if encoding:
                 reader_opts['encoding'] = encoding
 
+            # define nested shapefile groups reading
+            def iter_shapefile_groups(reader, group_field, subset=None):
+                def iterRecords():
+                    if subset:
+                        # iterate only at subset indices
+                        for i in subset:
+                            rec = reader.record(i, fields=[group_field])
+                            yield rec
+                    else:
+                        # iterate all records
+                        for rec in reader.iterRecords(fields=[group_field]):
+                            yield rec
+                # get all values of group_field
+                vals = set()
+                for rec in iterRecords():
+                    val = rec[0]
+                    vals.add(val)
+                # iterate group values
+                for groupval in sorted(vals):
+                    # yield each group value with list of index positions
+                    positions = []
+                    for rec in iterRecords():
+                        val = rec[0]
+                        if val == groupval:
+                            positions.append(rec.oid)
+                    yield groupval, positions
+
+            def iter_nested_shapefile_groups(reader, group_fields, level=0, subset=None):
+                # NOT FINISHED
+                # iterate through each group, depth first
+                data = []
+                group_field = group_fields[level]
+                for groupval,_subset in iter_shapefile_groups(reader, group_field, subset):
+                    item = (level, group_field, groupval, _subset)
+                    if group_field != group_fields[-1]:
+                        # recurse into next group_field
+                        children = iter_nested_shapefile_groups(reader, group_fields, level+1, _subset)
+                    else:
+                        # last group_field/max depth
+                        children = []
+                    data.append({'item':item,'children':children})
+                return data
+
+            # tests...
+            #import shapefile
+            #reader = shapefile.Reader(temppath, **reader_opts)
+            #group_fields = request.POST.getlist('name_field')
+            #data = iter_nested_shapefile_groups(reader, group_fields)
+            #import json
+            #print(json.dumps(data, indent=4))
+            #fdsfsdf
+
+            # begin reading shapefile
+            import shapefile
+            reader = shapefile.Reader(temppath, **reader_opts)
+
+            # parse nested structure
+            print('parsing shapefile nested structure')
+            name_fields = request.POST.getlist('name_field')
+            data = iter_nested_shapefile_groups(reader, name_fields)
+
+            # add to db
+            print('adding to db')
+            def process_entries(entries, parent=None):
+                for entry in entries:
+                    print(entry['item'][:3])
+
+                    level, group_field, groupval, subset = entry['item']
+                    name = groupval
+                    if not name:
+                        continue
+
+                    ref = models.BoundaryReference(parent=parent)
+                    ref.save()
+
+                    name_obj,created = models.BoundaryName.objects.get_or_create(name=name)
+                    ref.names.add(name_obj)
+
+                    if entry['children']:
+                        # process all children one level deeper
+                        process_entries(entry['children'], parent=ref)
+
+                    else:
+                        # reached leaf node
+                        # create snapshot
+                        if not len(subset) == 1: # should be only one
+                            print('WARNING: feature {} has {} entries in shapefile, skipping'.format(entry['item'][:3], len(subset)))
+                            continue
+                        i = subset[0]
+                        shape = reader.shape(i)
+                        geom = shape.__geo_interface__
+                        snap = models.BoundarySnapshot(event=event, boundary_ref=ref, geom=geom, source=source)
+                        snap.save()
+
+            process_entries(data)
+
+            '''
+            # begin reading shapefile (old)
             reader = shapefile.Reader(temppath, **reader_opts)
             for feat in reader.iterShapeRecords():
                 # create name references
@@ -123,14 +226,16 @@ def import_from_shapefile(request):
                     ref = models.BoundaryReference(parent=parent)
                     ref.save()
                     if name:
-                        name_obj = models.BoundaryName(boundary_ref=ref, name=name)
+                        name_obj = models.BoundaryName.objects.get_or_create(name=name)
                         name_obj.save()
+                        ref.names.add(name_obj)
                     parent = ref
 
                 # create snapshot
                 geom = feat.shape.__geo_interface__
                 snap = models.BoundarySnapshot(event=event, boundary_ref=ref, geom=geom, source=source)
                 snap.save()
+            '''
 
         # close
         temp.close()
