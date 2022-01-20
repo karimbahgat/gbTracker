@@ -11,6 +11,7 @@ from datetime import datetime
 folder = 'C:/Users/kimok/Documents/Github/geoContrast'
 collections = ['WFP','GRID3','SALB'] #['IPUMS','Other','SALB']
 isos = [] #['NOR','CHL','CAN','FRA','USA']
+exclude_isos = ['IDN']
 replace = False
 write_meta = True
 write_stats = True
@@ -43,6 +44,8 @@ for dirpath,dirnames,filenames in os.walk('sourceData'):
         if 'iso' in kwargs:
             # this is an iso-specific source
             if isos and kwargs['iso'] not in isos:
+                continue
+            if exclude_isos and kwargs['iso'] in exclude_isos:
                 continue
         
         print('')

@@ -120,18 +120,13 @@ def import_from_shapefile(request):
                             for rec in reader.iterRecords(fields=[group_field]):
                                 yield rec
                     # get all values of group_field with oid
-                    vals = set()
-                    for rec in iterRecords():
-                        val = rec[0]
-                        vals.add(val)
-                    # iterate group values
-                    for groupval in sorted(vals):
+                    vals = ((rec[0],rec.oid) for rec in iterRecords())
+                    # group oids by group value
+                    import itertools
+                    key = lambda x: x[0]
+                    for groupval,items in itertools.groupby(sorted(vals, key=key), key=key):
                         # yield each group value with list of index positions
-                        positions = []
-                        for rec in iterRecords():
-                            val = rec[0]
-                            if val == groupval:
-                                positions.append(rec.oid)
+                        positions = [oid for _,oid in items]
                         yield groupval, positions
                 else:
                     # return only a single group of entire shapefile
@@ -147,7 +142,6 @@ def import_from_shapefile(request):
                     # override all level 0 with a single iso country lookup
                     if level == 0 and iso:
                         groupval = iso3_to_name[iso]
-                    print(level,group_field,groupval,len(_subset))
                     # item
                     item = (level, group_field, groupval, _subset)
                     if group_field != group_fields[-1]:
@@ -158,15 +152,6 @@ def import_from_shapefile(request):
                         children = []
                     data.append({'item':item,'children':children})
                 return data
-
-            # tests...
-            #import shapefile
-            #reader = shapefile.Reader(temppath, **reader_opts)
-            #group_fields = request.POST.getlist('name_field')
-            #data = iter_nested_shapefile_groups(reader, group_fields)
-            #import json
-            #print(json.dumps(data, indent=4))
-            #fdsfsdf
 
             # begin reading shapefile
             import shapefile
