@@ -24,11 +24,18 @@ def snapshot(request, pk):
 
     mindate_num = date.fromisoformat(min(date_starts)).toordinal()
     maxdate_num = date.fromisoformat(max(date_ends)).toordinal()
+    date_start = date.fromisoformat(snap.event.date_start).toordinal()
+    date_end = date.fromisoformat(snap.event.date_end).toordinal()
     for s in snapshot_matches: 
-        start,end = s.event.date_start, s.event.date_end
-        s.date_start_perc = (date.fromisoformat(start).toordinal() - mindate_num) / (maxdate_num - mindate_num) * 100
-        s.date_end_perc = (date.fromisoformat(end).toordinal() - mindate_num) / (maxdate_num - mindate_num) * 100
+        start = date.fromisoformat(s.event.date_start).toordinal()
+        end = date.fromisoformat(s.event.date_end).toordinal()
+        s.date_start_perc = (start - mindate_num) / (maxdate_num - mindate_num) * 100
+        s.date_end_perc = (end - mindate_num) / (maxdate_num - mindate_num) * 100
         s.date_dur_perc = s.date_end_perc - s.date_start_perc
+        mid = (start + end) / 2.0
+        s.date_dist = min(abs(date_start-mid), abs(date_end-mid))
+    key = lambda s: s.date_dist
+    snapshot_matches = sorted(snapshot_matches, key=key)
 
     ticks = []
     numticks = 5
