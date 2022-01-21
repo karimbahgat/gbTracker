@@ -30,9 +30,21 @@ def snapshot(request, pk):
         s.date_end_perc = (date.fromisoformat(end).toordinal() - mindate_num) / (maxdate_num - mindate_num) * 100
         s.date_dur_perc = s.date_end_perc - s.date_start_perc
 
+    ticks = []
+    numticks = 5
+    incr = (maxdate_num - mindate_num) / (numticks-1)
+    cur = mindate_num
+    while cur <= maxdate_num:
+        print(cur)
+        perc = (cur - mindate_num) / (maxdate_num - mindate_num) * 100
+        ticks.append({'label':date.fromordinal(int(cur)), 'percent':perc})
+        cur += incr
+    print(ticks)
+
     context = {'snapshot':snap, 'geojson':json.dumps(geoj), 
                 'snapshot_matches':snapshot_matches,
-                'mindate':min(date_starts), 'maxdate':max(date_ends)}
+                'mindate':min(date_starts), 'maxdate':max(date_ends),
+                'ticks':ticks}
     return render(request, 'snapshot.html', context)
 
 # API
