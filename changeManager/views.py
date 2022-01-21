@@ -14,10 +14,58 @@ def snapshot(request, pk):
     snap = models.BoundarySnapshot.objects.get(pk=pk)
     geom = snap.geom.__geo_interface__
     geoj = {'type':'Feature', 'geometry':geom}
-    context = {'snapshot':snap, 'geojson':json.dumps(geoj)}
+
+    # find matching snapshots
+    ref_matches = _match_boundary_ref(snap.boundary_ref)
+    snapshot_matches = models.BoundarySnapshot.objects.filter(boundary_ref__in=ref_matches) | models.BoundarySnapshot.objects.filter(boundary_ref__parent__in=ref_matches)
+    from datetime import date
+    date_starts = [s.event.date_start for s in snapshot_matches]
+    date_ends = [s.event.date_end for s in snapshot_matches]
+
+    mindate_num = date.fromisoformat(min(date_starts)).toordinal()
+    maxdate_num = date.fromisoformat(max(date_ends)).toordinal()
+    for s in snapshot_matches: 
+        s.date_start_perc = (date.fromisoformat(s.event.date_start).toordinal() - mindate_num) / (maxdate_num - mindate_num) * 100
+        s.date_end_perc = (date.fromisoformat(s.event.date_end).toordinal() - mindate_num) / (maxdate_num - mindate_num) * 100
+        s.date_dur_perc = s.date_end_perc - s.date_start_perc
+
+    context = {'snapshot':snap, 'geojson':json.dumps(geoj), 
+                'snapshot_matches':snapshot_matches,
+                'mindate':min(date_starts), 'maxdate':max(date_ends)}
     return render(request, 'snapshot.html', context)
 
 # API
+
+def _match_boundary_ref(match_ref):
+    parents = match_ref.get_all_parents()
+    parent_names = [p.names.first().name for p in parents]
+    # build hierarchical search terms (lowest to highest)
+    terms = [s.strip() for s in parent_names if s.strip()]
+    # find all refs matching the lowest term (at any level)
+    refs = models.BoundaryReference.objects.filter(names__name__istartswith=terms[0])
+    #print(refs.query)
+    #print(refs.explain())
+    # calc match score by adding parent filters based on additional search terms
+    ref_scores = {}
+    for ref in refs:
+        if len(terms) > 1:
+            # hierarchical search terms
+            parent_matches = [1]
+            for t in terms[1:]:
+                _matches = [n.name.lower().startswith(t.lower())
+                                for parent in ref.get_all_parents(include_self=False)
+                                for n in parent.names.all()]
+                has_match = 1 if any(_matches) else 0
+                parent_matches.append(has_match)
+            max_score = max(len(terms), len(parent_matches))
+            score = sum(parent_matches) / max_score
+        else:
+            # single search term
+            score = 1
+        ref_scores[ref.id] = score
+    # get any snapshot belonging to the matched refs or its immediate parent
+    matches = sorted(refs, key=lambda r: max([ref_scores.get(par.id,0) for par in r.get_all_parents()]), reverse=True)
+    return matches
 
 def _parse_date(dateval):
     '''Can be a year, year-month, or year-month-day'''

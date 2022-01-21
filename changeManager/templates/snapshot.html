@@ -62,14 +62,48 @@
                     <p>{{ snapshot.event.date_start }} &rarr; {{ snapshot.event.date_end }}</p>
                     
                     <h3>Source</h3>
-                    <p>{{ snapshot.source }}</p>
+                    <p>{{ snapshot.source|slice:20 }}</p>
                 </div>
             </div>
             <div id="timeline">
                 <a class="button big" href="{% url 'build' %}?anchors={{ snapshot.id }}" style="float:right">Boundary Builder</a>
                 <h2>Timeline</h2>
-                <div id="timeline-data">
-                    Timeline of snapshots and changes goes here.
+                <style>
+                    .timespan {
+                        background-color:rgb(6,75,52); 
+                        color: white;
+                        border-radius:15px; 
+                        padding:10px;
+                        text-align:center;
+                    }
+                    .timespan-current {
+                        background-color:gray; 
+                        color: white;
+                    }
+                </style>
+                <div id="timeline-data" class="box" style="width:100%; position:relative">
+                    
+                    <div style="display:flex; flex-direction:row">
+                        <h3>{{ mindate }}</h3>
+                        <div style="width:80%">
+                        </div>
+                        <h3 style="text-justify:right">{{ maxdate }}</h3>
+                    </div>
+
+                    {% for snap_match in snapshot_matches %}
+                        <div class="timespan {% if snap_match.pk == snapshot.pk %}timespan-current{% endif %}" style="margin-left:{{ snap_match.date_start_perc }}%; width:{{ snap_match.date_dur_perc }}%">
+                            <a {% if snap_match.pk != snapshot.pk %}href="{% url 'snapshot' snap_match.pk %}"{% endif %}>
+                            {{ snap_match.event.date_start }} &rarr; {{ snap_match.event.date_start }}
+                            <br>
+                            {% for ref in snapshot.boundary_ref.get_all_parents %}
+                                {{ ref.names.first.name }}
+                                {% if not forloop.last %},{% endif %}
+                            {% endfor %}
+                            ({{ snap_match.source|slice:20 }})
+                            </a>
+                        </div>
+                    {% endfor %}
+
                 </div>
             </div>
         </div>
