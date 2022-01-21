@@ -83,11 +83,6 @@
                     .timespan:hover {
                         cursor:pointer;
                     }
-                    .timespan span {
-                        vertical-align:middle; 
-                        white-space:nowrap; 
-                        overflow:hidden;
-                    }
                     .timespan-current {
                         background-color:skyblue; 
                         color: white;
@@ -130,13 +125,16 @@
                     {% for snap_match in snapshot_matches %}
                         {% if snap_match.pk != snapshot.pk %}
                             <div class="timespan" style="left:{{ snap_match.date_start_perc }}%; width:{{ snap_match.date_dur_perc }}%" title="{{ snap_match.event.date_start }} &rarr; {{ snap_match.event.date_end }}" onclick="location.href='{% url 'snapshot' snap_match.pk %}'">
-                                <span>
-                                {% for ref in snapshot.boundary_ref.get_all_parents %}
-                                    {{ ref.names.first.name }}
-                                    {% if not forloop.last %},{% endif %}
-                                {% endfor %}
-                                ({{ snap_match.source|slice:20 }})
-                                </span>
+                                <div style="display:flex; flex-direction:row; align-items:center; width:100%">
+                                    <span style="margin-right:10px; vertical-align:middle; white-space:nowrap; overflow:hidden;">
+                                    {% for ref in snapshot.boundary_ref.get_all_parents %}
+                                        {{ ref.names.first.name }}
+                                        {% if not forloop.last %},{% endif %}
+                                    {% endfor %}
+                                    ({{ snap_match.source|slice:20 }})
+                                    </span>
+                                    <img height="30px" src="{% static 'images/snapshot-icon.png' %}" style="filter:invert(1); vertical-align:middle"/>
+                                </div>
                             </div>
                             <div class="timespan-filler">
                                 <!-- since timespans are absolute, need relative divs to fill up the height -->
