@@ -33,7 +33,7 @@
             <h1>Boundary snapshot</h1>
             <p>
                 {% for ref in snapshot.boundary_ref.get_all_parents reversed %}
-                    <a href="">{{ ref.names.all.0.name }}</a>
+                    <a href="{% url 'boundary_ref' ref.pk %}">{{ ref.names.all.0.name }}</a>
                     {% if not forloop.last %}
                     &rarr;
                     {% endif %}

@@ -1,0 +1,143 @@
+{% extends "templates/base.html" %}
+
+{% load static %}
+
+{% block page_content %}
+
+<script src="{% static 'js/ol.js' %}"></script>
+<link rel="stylesheet" href="{% static 'css/ol.css' %}" type="text/css">
+
+<style>
+    #hierarchy-and-info {
+        display:flex;
+        flex-direction:row;
+        gap:10px;
+        width:100%;
+    }
+    #hierarchy-div {
+        width:70%;
+    }
+    #hierarchy-data {
+        height:350px;
+        overflow:auto;
+    }
+    #info {
+        width:30%;
+    }
+    #map {
+        width: 100%; 
+        height: 400px;
+    }
+</style>
+
+<section>
+    <div class="content">
+        <header>
+            <h1>Boundary reference</h1>
+            <p>
+                {% for ref in boundary_ref.get_all_parents reversed %}
+                    <a href="{% url 'boundary_ref' ref.pk %}">{{ ref.names.all.0.name }}</a>
+                    {% if not forloop.last %}
+                    &rarr;
+                    {% endif %}
+                {% endfor %}
+            </p>
+        </header>
+        <div>
+            <div id="hierarchy-and-info">
+                <div id="hierarchy-div" class="box">
+                    <h2>Boundary Hierarchy</h2>
+                    <div id="hierarchy-data">
+                        <ul>
+                            {% for entry in boundary_ref.get_all_children %}
+                                <li>
+                                    <a href="{% url 'boundary_ref' entry.item.pk %}">
+                                    {{ entry.item.names.all.0.name }}
+                                    </a>
+                                </li>
+                                {% if entry.children %}
+                                    <ul>
+                                    {% for subentry in entry.children %}
+                                    <li>
+                                        <a href="{% url 'boundary_ref' subentry.item.pk %}">
+                                        {{ subentry.item.names.all.0.name }}
+                                        </a>
+                                    </li>
+                                    {% endfor %}
+                                    </ul>
+                                {% endif %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                <div id="info" class="box">
+                    <h3>Names</h3>
+                    <p>
+                        {% for name in boundary_ref.names.all %}
+                            {{ name.name }}
+                            {% if not forloop.last %}
+                            ,
+                            {% endif %}
+                        {% endfor %}
+                    </p>
+
+                    <h3>Identifiers</h3>
+                    <p>[None]</p>
+
+                    <h3>Snapshot</h3>
+                    <ul>
+                        {% for snap in boundary_ref.snapshots.all %}
+                            <li>
+                                <a href="{% url 'snapshot' snap.pk %}">
+                                    {{ snap.event.date_start }}
+                                    &rarr;
+                                    {{ snap.event.date_end }}
+                                </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            <div id="map-div">
+                <h2>Map Hierarchy</h2>
+                <div id="map"></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    // layer
+    var layer = new ol.layer.Vector({
+        source: new ol.source.Vector(),
+        //style: style,
+    });
+
+    // map
+    var map = new ol.Map({
+        target: 'map',
+        controls: ol.control.defaults().extend([new ol.control.FullScreen(),
+                                                new ol.control.ScaleLine({units: 'metric'}),
+                                                ]),
+        layers: [
+        new ol.layer.Tile({
+            source: new ol.source.XYZ({
+                attributions: 'Satellite Imagery <a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> ',
+                url:
+                'https://api.maptiler.com/tiles/satellite/{z}/{x}/{y}.jpg?key=' + 'aknzJQRnZg32XVVPrcYH',
+                maxZoom: 20,
+                crossOrigin: 'anonymous' // necessary for converting map to img during pdf generation: https://stackoverflow.com/questions/66671183/how-to-export-map-image-in-openlayer-6-without-cors-problems-tainted-canvas-iss
+            })}),
+            layer,
+        ],
+        view: new ol.View({
+            center: ol.proj.fromLonLat([0,0]),
+            zoom: 1
+        })
+    });
+
+    //map.getView().fit(layer.getSource().getExtent());
+
+</script>
+
+{% endblock %}

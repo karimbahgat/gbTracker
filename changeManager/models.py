@@ -18,13 +18,13 @@ class BoundaryReference(models.Model):
             refs.append(cur)
         return refs
 
-    #def get_all_children(self):
-    #    '''Returns a list of all parents, starting with and including self.'''
-    #    refs = [self]
-    #    cur = self
-    #    if cur.children:
-    #        refs.extend(self.children)
-    #    return refs
+    def get_all_children(self):
+        '''Returns a list of all children.'''
+        results = []
+        for child in self.children.all():
+            subchildren = child.get_all_children()
+            results.append( {'item':child, 'children':subchildren} )
+        return results
 
     def full_name(self):
         all_refs = self.get_all_parents()

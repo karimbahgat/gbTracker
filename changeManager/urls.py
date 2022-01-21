@@ -19,6 +19,7 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path('boundary_ref/<int:pk>/', views.boundary_ref, name='boundary_ref'),
     path('snapshots/<int:pk>/', views.snapshot, name='snapshot'),
     path('api/snapshots/<int:pk>/', views.api_snapshots, name='api_snapshot'),
     path('api/snapshots', views.api_snapshots, name='api_snapshots'),

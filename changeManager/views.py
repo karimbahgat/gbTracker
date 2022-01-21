@@ -9,6 +9,12 @@ import json
 
 # Create your views here.
 
+def boundary_ref(request, pk):
+    '''View of a snapshot instance.'''
+    ref = models.BoundaryReference.objects.get(pk=pk)
+    context = {'boundary_ref':ref}
+    return render(request, 'boundaryref.html', context)
+
 def snapshot(request, pk):
     '''View of a snapshot instance.'''
     snap = models.BoundarySnapshot.objects.get(pk=pk)
@@ -142,9 +148,14 @@ def api_snapshots(request):
     if request.method == 'GET':
         # get one or more snapshots based on params
         print(request.GET)
+        ids = request.GET.get('ids', None)
         search = request.GET.get('search', None)
         datesearch = request.GET.get('date', None)
-        if search:
+        if ids:
+            ids = [int(x) for x in ids.split(',')]
+            matches = models.BoundarySnapshot.objects.filter(pk__in=ids)
+            count = matches.count()
+        elif search:
             # build hierarchical search terms (lowest to highest)
             terms = [s.strip() for s in search.split(',') if s.strip()]
             # find all refs matching the lowest term (at any level)
