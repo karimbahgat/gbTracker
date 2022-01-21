@@ -26,6 +26,11 @@ class BoundaryReference(models.Model):
     #        refs.extend(self.children)
     #    return refs
 
+    def full_name(self):
+        all_refs = self.get_all_parents()
+        full_name = ', '.join([ref.names.first().name for ref in all_refs])
+        return full_name
+
 class BoundaryName(models.Model):
     name = models.CharField(max_length=100)
 
