@@ -80,9 +80,18 @@
                         height:50px;
                         overflow:hidden;
                     }
+                    .timespan:hover {
+                        cursor:pointer;
+                    }
+                    .timespan span {
+                        vertical-align:middle; 
+                        white-space:nowrap; 
+                        overflow:hidden;
+                    }
                     .timespan-current {
-                        background-color:gray; 
+                        background-color:skyblue; 
                         color: white;
+                        height:100%;
                     }
                     .timespan-filler {
                         color: white;
@@ -92,7 +101,7 @@
                         overflow:hidden;
                     }
                 </style>
-                <div id="timeline-data" style="width:90%; margin:5%; position:relative; background-color:whitesmoke; border:rgb(200,200,200) 1px solid">
+                <div id="timeline-data" style="width:90%; min-height:80px; margin:5%; position:relative; background-color:whitesmoke; border:rgb(200,200,200) 1px solid">
                     
                     <!-- tick date labels -->
                     <div style="width:100%; background-color:gray">
@@ -107,24 +116,33 @@
                         </div>
                     {% endfor %}
 
-                    <!-- snapshot timespans -->
+                    <!-- current time marking -->
+                    {% for snap_match in snapshot_matches %}
+                        {% if snap_match.pk == snapshot.pk %}
+                            <div class="timespan-current" style="position:absolute; top:0%; left:{{ snap_match.date_start_perc }}%; width:{{ snap_match.date_dur_perc }}%">
+                                <div style="color:rgb(189, 223, 236); width:100%; text-align:center; font-weight:bold; font-style:italic">CURRENT</div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+
+                    <!-- other snapshot timespans -->
                     <br>
                     {% for snap_match in snapshot_matches %}
-                        <div class="timespan {% if snap_match.pk == snapshot.pk %}timespan-current{% endif %}" style="left:{{ snap_match.date_start_perc }}%; width:{{ snap_match.date_dur_perc }}%">
-                            <a {% if snap_match.pk != snapshot.pk %}href="{% url 'snapshot' snap_match.pk %}"{% endif %}>
-                                {{ snap_match.event.date_start }} &rarr; {{ snap_match.event.date_end }}
-                                <br>
+                        {% if snap_match.pk != snapshot.pk %}
+                            <div class="timespan" style="left:{{ snap_match.date_start_perc }}%; width:{{ snap_match.date_dur_perc }}%" title="{{ snap_match.event.date_start }} &rarr; {{ snap_match.event.date_end }}" onclick="location.href='{% url 'snapshot' snap_match.pk %}'">
+                                <span>
                                 {% for ref in snapshot.boundary_ref.get_all_parents %}
                                     {{ ref.names.first.name }}
                                     {% if not forloop.last %},{% endif %}
                                 {% endfor %}
                                 ({{ snap_match.source|slice:20 }})
-                            </a>
-                        </div>
-                        <div class="timespan-filler">
-                            <!-- since timespans are absolute, need relative divs to fill up the height -->
-                        </div>
-                        <br>
+                                </span>
+                            </div>
+                            <div class="timespan-filler">
+                                <!-- since timespans are absolute, need relative divs to fill up the height -->
+                            </div>
+                            <br>
+                        {% endif %}
                     {% endfor %}
 
                 </div>
