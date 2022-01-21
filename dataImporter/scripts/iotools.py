@@ -44,6 +44,9 @@ import re
 import csv
 import warnings
 
+import dateparser
+import datetime
+
 import shapefile as pyshp
 from zipfile import ZipFile, ZIP_DEFLATED
 
@@ -202,7 +205,10 @@ def import_data(input_dir,
         if year:
             datestring = str(year)
         elif source_updated:
-            datestring = source_updated[-4:]
+            yearlag = 5 # assume source date may have originated no longer than 5 years prior
+            todate = dateparser.parse(source_updated)
+            fromdate = todate - datetime.date(todate.year-yearlag, todate.month, todate.day)
+            datestring = '{}/{}'.format(fromdate.isoformat(), todate.isoformat())
 
         # send shapefile and metadata as POST request to gbTracker website
         import requests

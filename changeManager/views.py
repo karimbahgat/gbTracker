@@ -25,8 +25,9 @@ def snapshot(request, pk):
     mindate_num = date.fromisoformat(min(date_starts)).toordinal()
     maxdate_num = date.fromisoformat(max(date_ends)).toordinal()
     for s in snapshot_matches: 
-        s.date_start_perc = (date.fromisoformat(s.event.date_start).toordinal() - mindate_num) / (maxdate_num - mindate_num) * 100
-        s.date_end_perc = (date.fromisoformat(s.event.date_end).toordinal() - mindate_num) / (maxdate_num - mindate_num) * 100
+        start,end = s.event.date_start, s.event.date_end
+        s.date_start_perc = (date.fromisoformat(start).toordinal() - mindate_num) / (maxdate_num - mindate_num) * 100
+        s.date_end_perc = (date.fromisoformat(end).toordinal() - mindate_num) / (maxdate_num - mindate_num) * 100
         s.date_dur_perc = s.date_end_perc - s.date_start_perc
 
     context = {'snapshot':snap, 'geojson':json.dumps(geoj), 

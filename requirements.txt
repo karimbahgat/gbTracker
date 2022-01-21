@@ -7,3 +7,4 @@ requests
 git+https://github.com/karimbahgat/django-wkb
 shapefile==2.2.*
 shapely==1.*
+dateparser==1.1.*
