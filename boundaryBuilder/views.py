@@ -40,7 +40,8 @@ def build(request):
             url = 'http://127.0.0.1:8000' + reverse('api_suggest_previous_changes')
             params = {'geometry':json.dumps(geom),
                     'date':snap.event.date_end,
-                    'full_name':snap.boundary_ref.full_name()}
+                    'match_name':snap.boundary_ref.full_name(),
+                    'match_thresh':0.5} # minimum 50% name match
             resp = requests.post(url,
                                 data=params)
             prev = json.loads(resp.content)
@@ -71,40 +72,44 @@ def api_suggest_previous_changes(request):
         # get change events stored in database
         # ... 
         # get previous snapshots
-        namesearch = request.POST['full_name']
+        namesearch = request.POST['match_name']
+        matchthresh = request.POST.get('match_thresh', None)
         datesearch = '/' + request.POST['date'] # prior to date
         params = {'search':namesearch, 'date':datesearch}
+        if matchthresh:
+            params['search_thresh'] = matchthresh
         url = 'http://127.0.0.1:8000' + reverse('api_snapshots')
         resp = requests.get(url,
                             params=params)
         results = json.loads(resp.content)['results']
-        results  = sorted(results, key=lambda x: x['object']['event']['date_end'])
-        # get first previous snapshot event
-        prevmatch = results[-1]
-        # load geometry
-        prevobj = models.BoundarySnapshot.objects.get(pk=prevmatch['object']['id'])
-        # compare geometries
-        geom = asShape(json.loads(request.POST['geometry'])).simplify(0.01)
-        geom2 = asShape(prevobj.geom.__geo_interface__).simplify(0.01)
-        isec = geom.intersection(geom2)
-        union = geom.union(geom2)
-        overlap = isec.area / union.area
-        # serialize
-        def serialize_snapshot(m):
-            return {'id':m.id,
-                    'event':model_to_dict(m.event),
-                    'full_name':m.boundary_ref.full_name(),
-                    'source':m.source,
-                    }
-        # suggest different types of change
-        data = []
-        if overlap < 0.999: # should be ca 95%
-            change = {'type':'Transfer', 'date':prevobj.event.date_end,
-                    'match_score':prevmatch['match_score'],
-                    'from_boundary':serialize_snapshot(prevobj)}
-            data.append(change)
-        # return data
-        resp = JsonResponse(data, safe=False)
-        return resp
+        results  = sorted(results, key=lambda x: x['object']['event']['date_end'], reverse=True)
+        # return the first previous snapshot event that can be considered a change
+        for prevmatch in results:
+            # load geometry
+            prevobj = models.BoundarySnapshot.objects.get(pk=prevmatch['object']['id'])
+            # compare geometries
+            geom = asShape(json.loads(request.POST['geometry'])).simplify(0.01)
+            geom2 = asShape(prevobj.geom.__geo_interface__).simplify(0.01)
+            isec = geom.intersection(geom2)
+            union = geom.union(geom2)
+            overlap = isec.area / union.area
+            # serialize
+            def serialize_snapshot(m):
+                return {'id':m.id,
+                        'event':model_to_dict(m.event),
+                        'full_name':m.boundary_ref.full_name(),
+                        'source':m.source,
+                        }
+            # suggest different types of change
+            data = []
+            if overlap < 0.999: # should be ca 95%
+                change = {'type':'Transfer', 'date':prevobj.event.date_end,
+                        'match_score':prevmatch['match_score'],
+                        'from_boundary':serialize_snapshot(prevobj)}
+                data.append(change)
+            # if any change data, this is the first previous change
+            if data:
+                resp = JsonResponse(data, safe=False)
+                return resp
 
 

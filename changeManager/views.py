@@ -153,6 +153,7 @@ def api_snapshots(request):
         print(request.GET)
         ids = request.GET.get('ids', None)
         search = request.GET.get('search', None)
+        search_thresh = request.GET.get('search_thresh', None)
         datesearch = request.GET.get('date', None)
         if ids:
             ids = [int(x) for x in ids.split(',')]
@@ -199,6 +200,10 @@ def api_snapshots(request):
                 snap_scores[snap.id] = score
             # sort
             snaps = sorted(snaps, key=lambda snap: snap_scores[snap.id], reverse=True)
+            # filter by threshold
+            if search_thresh:
+                snaps = [snap for snap in snaps 
+                        if snap_scores[snap.id] >= float(search_thresh)]
             count = len(snaps)
         else:
             # no name filtering

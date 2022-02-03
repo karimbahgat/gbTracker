@@ -57,7 +57,7 @@
             {% for b in boundaries %}
                 <div class="boundary-div box">
                     <h3>
-                        {{ b.object.boundary_ref.full_name }}
+                        {{ b.object.boundary_ref.full_name }} ({{ b.object.event.date_start }} &rarr; {{ b.object.event.date_end }})
                     </h3>
 
                     <div class="changes-div">
