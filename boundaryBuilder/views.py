@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.forms.models import model_to_dict
 
 from changeManager import models
 
@@ -75,23 +76,32 @@ def api_suggest_previous_changes(request):
         params = {'search':namesearch, 'date':datesearch}
         url = 'http://127.0.0.1:8000' + reverse('api_snapshots')
         resp = requests.get(url,
-                            data=params)
-        snapshots = json.loads(resp.content)['results']
+                            params=params)
+        results = json.loads(resp.content)['results']
+        results  = sorted(results, key=lambda x: x['object']['event']['date_end'])
         # get first previous snapshot event
-        prev = sorted(snapshots, key=lambda x: x['event']['date_end'])[-1]
+        prevmatch = results[-1]
         # load geometry
-        prev = models.BoundarySnapshot.objects.get(pk=prev['id'])
+        prevobj = models.BoundarySnapshot.objects.get(pk=prevmatch['object']['id'])
         # compare geometries
         geom = asShape(json.loads(request.POST['geometry'])).simplify(0.01)
-        geom2 = asShape(prev.geom.__geo_interface__).simplify(0.01)
+        geom2 = asShape(prevobj.geom.__geo_interface__).simplify(0.01)
         isec = geom.intersection(geom2)
         union = geom.union(geom2)
         overlap = isec.area / union.area
+        # serialize
+        def serialize_snapshot(m):
+            return {'id':m.id,
+                    'event':model_to_dict(m.event),
+                    'full_name':m.boundary_ref.full_name(),
+                    'source':m.source,
+                    }
         # suggest different types of change
         data = []
         if overlap < 0.999: # should be ca 95%
-            change = {'type':'Transfer', 'date':prev.event.date_end,
-                    'from_boundary':prev.boundary_ref.full_name()}
+            change = {'type':'Transfer', 'date':prevobj.event.date_end,
+                    'match_score':prevmatch['match_score'],
+                    'from_boundary':serialize_snapshot(prevobj)}
             data.append(change)
         # return data
         resp = JsonResponse(data, safe=False)

@@ -110,9 +110,10 @@
         // populate table
         console.log(data);
         tbody = document.querySelector('#rawdata-table tbody');
-        for (snap of data.results) {
+        for (item of data.results) {
             tr = document.createElement('tr');
             tbody.appendChild(tr);
+            let snap = item.object;
 
             // date
             td = document.createElement('td');
@@ -127,6 +128,11 @@
                 names.push(ref.names[0]);
             };
             td.innerText = names.join(' / ');
+            
+            // add match score
+            if ('match_score' in item) {
+                td.innerText += ' (' + item.match_score + '%)';
+            };
 
             // type
             td = document.createElement('td');

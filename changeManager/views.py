@@ -191,9 +191,15 @@ def api_snapshots(request):
                     kwargs['event__date_end__gte'] = start
                 if end:
                     kwargs['event__date_start__lte'] = end
-            matches = models.BoundarySnapshot.objects.filter(boundary_ref__in=refs, **kwargs) | models.BoundarySnapshot.objects.filter(boundary_ref__parent__in=refs, **kwargs)
-            matches = sorted(matches, key=lambda snap: max([ref_scores.get(par.id,0) for par in snap.boundary_ref.get_all_parents()]), reverse=True)
-            count = len(matches)
+            snaps = models.BoundarySnapshot.objects.filter(boundary_ref__in=refs, **kwargs) | models.BoundarySnapshot.objects.filter(boundary_ref__parent__in=refs, **kwargs)
+            # calc snapshot scores
+            snap_scores = {}
+            for snap in snaps:
+                score = max([ref_scores.get(par.id,0) for par in snap.boundary_ref.get_all_parents()])
+                snap_scores[snap.id] = score
+            # sort
+            snaps = sorted(snaps, key=lambda snap: snap_scores[snap.id], reverse=True)
+            count = len(snaps)
         else:
             # no name filtering
             if datesearch:
@@ -204,13 +210,13 @@ def api_snapshots(request):
                     kwargs['event__date_end__gte'] = start
                 if end:
                     kwargs['event__date_start__lte'] = end
-                matches = models.BoundarySnapshot.objects.filter(**kwargs)
+                snaps = models.BoundarySnapshot.objects.filter(**kwargs)
             else:
                 # get all snapshots
-                matches = models.BoundarySnapshot.objects.all()
-            count = matches.count()
+                snaps = models.BoundarySnapshot.objects.all()
+            count = snaps.count()
         # paginate (for now just return first X)
-        matches = matches[:100]
+        snaps = snaps[:100]
         # serialize
         def serialize_snapshot(m):
             boundary_refs = [{'id':p.id, 'names':[n.name for n in p.names.all()]}
@@ -220,9 +226,13 @@ def api_snapshots(request):
                     'boundary_refs':boundary_refs,
                     'source':m.source,
                     }
-        matches = [serialize_snapshot(m) for m in matches]
+        if search:
+            results = [{'object':serialize_snapshot(m), 'match_score':snap_scores[m.id] * 100} 
+                        for m in snaps]
+        else:
+            results = [{'object':serialize_snapshot(m)} for m in snaps]
         # format results
-        data = {'count':count, 'results':matches}
+        data = {'count':count, 'results':results}
         # return as json
         resp = JsonResponse(data)
         return resp
