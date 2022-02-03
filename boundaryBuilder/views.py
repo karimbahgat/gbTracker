@@ -1,13 +1,31 @@
 from django.shortcuts import render
+from django.urls import reverse
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 
 from changeManager import models
 
 import json
 
+import requests
+from shapely.geometry import asShape
+
 # Create your views here.
 
 def build(request):
-    '''Builds and increment boundary changes one step at a time.'''
+    '''Builds and increment boundary changes one step at a time.
+    
+    Suggested change events are based on:
+    - Looking up change events that matches the boundaryref, returning only 
+        the first/closest possible date before/after current date. Only include 
+        boundaryrefs above some name/code match threshold. 
+    - Same, but instead lookup snapshot matches before/after current date. 
+        Then compare current snapshot to the prev/next snapshot to suggest change
+        events. Eg if before/after are signif diff, then suggest transferchange. 
+        If cannot find prev/next boundaryref match then suggest created/dissolved 
+        event, then find overlapping snapshots and add transfer events to these. 
+        If name diff is above some thresh, add namechange event. 
+    '''
     if request.method == 'GET':
         # initial anchor points (snapshot ids) chosen
         # display original snapshot including prev/next snapshots/changes
@@ -17,11 +35,21 @@ def build(request):
             snap = models.BoundarySnapshot.objects.get(pk=pk)
             # get geometry
             geom = snap.geom.__geo_interface__
-            geoj = {'type':'Feature', 'geometry':geom}
-            # get changes
-            # ...
+            # get prev changes
+            url = 'http://127.0.0.1:8000' + reverse('api_suggest_previous_changes')
+            params = {'geometry':json.dumps(geom),
+                    'date':snap.event.date_end,
+                    'full_name':snap.boundary_ref.full_name()}
+            resp = requests.post(url,
+                                data=params)
+            prev = json.loads(resp.content)
+            # get next changes
+            #nxt = requests.post(reverse('api_suggest_next_changes'),
+            #                    data={'geometry':geoj})
             # add to list
-            item = {'object':snap, 'geojson':json.dumps(geoj)}
+            geoj = {'type':'Feature', 'geometry':geom}
+            item = {'object':snap, 'geojson':json.dumps(geoj),
+                    'prev':prev} #, 'next':nxt}
             context['boundaries'].append( item )
 
         return render(request, 'build.html', context)
@@ -30,3 +58,43 @@ def build(request):
         # receiving change data
         # apply and display modified changes including prev/next snapshots/changes
         fdsfs
+
+# API
+
+@csrf_exempt
+def api_suggest_previous_changes(request):
+    '''Suggest previous changes for a single boundary,
+    given a name, date, and geometry.'''
+    if request.method == 'POST':
+        #print('POST',request.POST)
+        # get change events stored in database
+        # ... 
+        # get previous snapshots
+        namesearch = request.POST['full_name']
+        datesearch = '/' + request.POST['date'] # prior to date
+        params = {'search':namesearch, 'date':datesearch}
+        url = 'http://127.0.0.1:8000' + reverse('api_snapshots')
+        resp = requests.get(url,
+                            data=params)
+        snapshots = json.loads(resp.content)['results']
+        # get first previous snapshot event
+        prev = sorted(snapshots, key=lambda x: x['event']['date_end'])[-1]
+        # load geometry
+        prev = models.BoundarySnapshot.objects.get(pk=prev['id'])
+        # compare geometries
+        geom = asShape(json.loads(request.POST['geometry'])).simplify(0.01)
+        geom2 = asShape(prev.geom.__geo_interface__).simplify(0.01)
+        isec = geom.intersection(geom2)
+        union = geom.union(geom2)
+        overlap = isec.area / union.area
+        # suggest different types of change
+        data = []
+        if overlap < 0.999: # should be ca 95%
+            change = {'type':'Transfer', 'date':prev.event.date_end,
+                    'from_boundary':prev.boundary_ref.full_name()}
+            data.append(change)
+        # return data
+        resp = JsonResponse(data, safe=False)
+        return resp
+
+

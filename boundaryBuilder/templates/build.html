@@ -21,6 +21,17 @@
     .boundary-div {
         width: 100%;
     }
+    .changes-div {
+        width: 100%;
+        display:flex;
+        flex-direction:row;
+    }
+    .changes-prev-div {
+        width: 100%;
+    }
+    .changes-next-div {
+        width: 100%;
+    }
 </style>
 
 <section>
@@ -54,7 +65,19 @@
                         {% endfor %}
                     </h3>
 
-                    <p>Some stuff goes here...</p>
+                    <div class="changes-div">
+                        <div class="changes-prev-div">
+                            <h5>Previous</h5>
+                            {% for change in b.prev %}
+                                {% if change.type == 'Transfer' %}
+                                    {{ change.date }}: Received territory from {{ change.from_boundary }}
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        <div class="changes-next-div">
+                            <h5>Next</h5>
+                        </div>
+                    </div>
 
                 </div>
             {% endfor %}

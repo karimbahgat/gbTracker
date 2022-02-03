@@ -2,6 +2,7 @@ from django.http.response import HttpResponse
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.forms.models import fields_for_model, model_to_dict
+from django.views.decorators.csrf import csrf_exempt
 
 from . import models
 
@@ -126,6 +127,7 @@ def _parse_date(dateval):
             raise Exception('"{}" is not a valid date'.format(dateval))
         return start,end
 
+@csrf_exempt
 def api_snapshot(request, pk):
     if request.method == 'GET':
         snap = models.BoundarySnapshot.objects.get(pk=pk)
@@ -144,6 +146,7 @@ def api_snapshot(request, pk):
         resp = JsonResponse(data)
         return resp
 
+@csrf_exempt
 def api_snapshots(request):
     if request.method == 'GET':
         # get one or more snapshots based on params

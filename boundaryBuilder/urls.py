@@ -20,4 +20,5 @@ from . import views
 
 urlpatterns = [
     path('build', views.build, name='build'),
+    path('api_suggest_previous_changes', views.api_suggest_previous_changes, name='api_suggest_previous_changes'),
 ]
