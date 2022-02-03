@@ -66,6 +66,7 @@
                             {% for change in b.prev %}
                                 {% if change.type == 'Transfer' %}
                                     {{ change.date }}: Received territory from {{ change.from_boundary.full_name }}
+                                    [{{ change.overlap|floatformat:1 }}% similar]
                                     <br>
                                     [{{ change.match_score }}% match confidence]
                                 {% endif %}

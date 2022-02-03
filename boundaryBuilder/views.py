@@ -105,6 +105,7 @@ def api_suggest_previous_changes(request):
             if overlap < 0.999: # should be ca 95%
                 change = {'type':'Transfer', 'date':prevobj.event.date_end,
                         'match_score':prevmatch['match_score'],
+                        'overlap':overlap * 100,
                         'from_boundary':serialize_snapshot(prevobj)}
                 data.append(change)
             # if any change data, this is the first previous change
