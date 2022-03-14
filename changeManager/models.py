@@ -4,8 +4,24 @@ from djangowkb.fields import GeometryField
 
 # Create your models here.
 
+SOURCE_TYPES = [
+    ('TextSource', 'Text Source'),
+    ('DataSource', 'Data Source'),
+    ('MapSource', 'Map Source'),
+]
+
+class BoundarySource(models.Model):
+    type = models.CharField(max_length=50,
+                            choices=SOURCE_TYPES)
+    name = models.CharField(max_length=200)
+    citation = models.TextField(blank=True, null=True)
+    note = models.TextField(blank=True, null=True)
+    url = models.URLField(blank=True, null=True)
+
 class BoundaryReference(models.Model):
     parent = models.ForeignKey('BoundaryReference', related_name='children', on_delete=models.PROTECT, 
+                                blank=True, null=True)
+    source = models.ForeignKey('BoundarySource', related_name='boundary_refs', on_delete=models.PROTECT, 
                                 blank=True, null=True)
     names = models.ManyToManyField('BoundaryName', related_name='boundary_refs')
 
@@ -59,4 +75,3 @@ class BoundarySnapshot(models.Model):
     event = models.ForeignKey('Event', related_name='snapshots', on_delete=models.CASCADE)
     boundary_ref = models.ForeignKey('BoundaryReference', related_name='snapshots', on_delete=models.CASCADE)
     geom = GeometryField()
-    source = models.CharField(max_length=100)

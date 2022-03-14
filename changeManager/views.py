@@ -10,6 +10,17 @@ import json
 
 # Create your views here.
 
+def source(request, pk):
+    '''View of a source'''
+    src = models.BoundarySource.objects.get(pk=pk)
+    context = {'source':src}
+    if src.type == 'TextSource':
+        raise NotImplementedError()
+    elif src.type == 'DataSource':
+        return render(request, 'source_data.html', context)
+    elif src.type == 'MapSource':
+        return render(request, 'source_map.html', context)
+
 def boundary_ref(request, pk):
     '''View of a snapshot instance.'''
     ref = models.BoundaryReference.objects.get(pk=pk)
@@ -136,9 +147,10 @@ def api_snapshot(request, pk):
         def serialize_snapshot(m):
             boundary_refs = [{'id':p.id, 'names':[n.name for n in p.names.all()]}
                             for p in m.boundary_ref.get_all_parents()]
+            source = m.boundary_ref.source
             return {'event':model_to_dict(m.event),
                     'boundary_refs':boundary_refs,
-                    'source':m.source,
+                    'source':{'name':source.name, 'id':source.pk},
                     }
         data = serialize_snapshot(snap)
 
@@ -226,10 +238,11 @@ def api_snapshots(request):
         def serialize_snapshot(m):
             boundary_refs = [{'id':p.id, 'names':[n.name for n in p.names.all()]}
                             for p in m.boundary_ref.get_all_parents()]
+            source = m.boundary_ref.source
             return {'id':m.id,
                     'event':model_to_dict(m.event),
                     'boundary_refs':boundary_refs,
-                    'source':m.source,
+                    'source':{'name':source.name, 'id':source.pk},
                     }
         if search:
             results = [{'object':serialize_snapshot(m), 'match_score':snap_scores[m.id] * 100} 

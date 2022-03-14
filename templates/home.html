@@ -142,7 +142,11 @@
             // source
             td = document.createElement('td');
             tr.appendChild(td);
-            td.innerText = snap.source;
+            a = document.createElement('a');
+            console.log(snap.source);
+            a.href = 'source/'+snap.source.id+'/';
+            a.innerText = snap.source.name;
+            td.appendChild(a);
 
             // view button
             td = document.createElement('td');

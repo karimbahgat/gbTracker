@@ -86,9 +86,19 @@ def import_from_shapefile(request):
             event.save()
 
             # get source
-            source = request.POST.getlist('source')
-            if isinstance(source, list):
-                source = '|'.join(source)
+            source_name = request.POST['source_name']
+            source = models.BoundarySource.objects.filter(name=source_name).first()
+            if not source:
+                source_cite = request.POST.get('source_citation', '')
+                source_note = request.POST.get('source_note', '')
+                source_url = request.POST.get('source_url', '')
+                source = models.BoundarySource(type="DataSource",
+                                                name=source_name,
+                                                citation=source_cite,
+                                                note=source_note,
+                                                url=source_url,
+                                                )
+                source.save()
 
             # read shapefile from temporary zipfile
             # (name_field is a list of one or more name_field inputs from a form)
@@ -173,11 +183,11 @@ def import_from_shapefile(request):
                     name = groupval
                     if not name:
                         continue
-                    name_obj,created = models.BoundaryName.objects.get_or_create(name__iexact=name)
+                    name_obj,created = models.BoundaryName.objects.get_or_create(name=name)
 
                     if entry['children']:
                         # create parent node
-                        ref = models.BoundaryReference(parent=parent)
+                        ref = models.BoundaryReference(parent=parent, source=source)
                         ref.save()
                         ref.names.add(name_obj)
 
@@ -188,13 +198,13 @@ def import_from_shapefile(request):
                         # reached leaf node
                         for i in subset:
                             # create ref
-                            ref = models.BoundaryReference(parent=parent)
+                            ref = models.BoundaryReference(parent=parent, source=source)
                             ref.save()
                             ref.names.add(name_obj)
                             # create snapshot
                             shape = reader.shape(i)
                             geom = shape.__geo_interface__
-                            snap = models.BoundarySnapshot(event=event, boundary_ref=ref, geom=geom, source=source)
+                            snap = models.BoundarySnapshot(event=event, boundary_ref=ref, geom=geom)
                             snap.save()
 
             process_entries(data)
