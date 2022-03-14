@@ -10,20 +10,10 @@
 <section>
     <div class="content">
         <header>
-            <h1>Source</h1>
-
-            <div style="float:left;">
-                <a href="" style="text-align:center; background-color:orange; color:white; border-radius:10px; padding:7px; font-family:inherit; font-size:inherit; font-weight:bold; text-decoration:underline; margin:3px;">
-                Edit
-                </a>
-            </div>
-
-            <div style="float:right;">
-                <a href="" style="text-align:center; background-color:crimson; color:white; border-radius:10px; padding:7px; font-family:inherit; font-size:inherit; font-weight:bold; text-decoration:underline; margin:3px;">
-                    Drop?
-                </a>
-            </div>
-
+            <h2 style="text-align:center">
+                <img height="20px" src="{% static 'changeManager/images/source.png' %}">
+                {{ source.name }}
+            </h2>
         </header>
 
         <div>
@@ -36,13 +26,6 @@
                     width:98%
                     }
             </style>
-    
-            <h2 style="text-align:center; margin-top:0">
-                <img height="25px" src="{% static 'changeManager/images/source.png' %}">{{ pk }}
-            </h2>
-            <h2 style="text-align:center">
-                {{ source.name }}
-            </h2>
 
             <div class="box">
                 <div class="row">
