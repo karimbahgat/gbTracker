@@ -10,6 +10,11 @@ from changeManager import models
 
 # Create your views here.
 
+def datasets(request):
+    sources = models.BoundarySource.objects.all()
+    context = {'sources':sources}
+    return render(request, 'datasets.html', context)
+
 #def _import_data(parent, features):
 #    '''Create snapshots for all features belonging to a particular parent'''
 #    fdsfsdf

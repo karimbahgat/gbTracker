@@ -1,0 +1,79 @@
+{% extends "templates/base.html" %}
+
+{% load static %}
+
+{% block page_content %}
+
+<script src="{% static 'js/ol.js' %}"></script>
+<link rel="stylesheet" href="{% static 'css/ol.css' %}" type="text/css">
+
+<style>
+    header {
+        display:flex;
+        flex-direction:row;
+        align-items:top;
+        margin-bottom:40px;
+        margin-top:-30px;
+    }
+    .header-icon {
+    }
+    .header-icon img {
+        height:200px;
+        width:200px;
+        border-radius:50%;
+    }
+    .header-content {
+        margin:10px;
+    }
+</style>
+
+<section>
+    <div>
+        <header>
+            <div class="header-icon">
+                <img src="{% static 'images/boundarydata.png' %}"/>
+            </div>
+            <div class="header-content">
+                <h2>Boundary datasets</h2>
+                <p>
+                    Uploading boundary data and associated temporal metadata 
+                    helps by providing an "anchor point" or a <b>snapshot</b> of what a set of
+                    boundaries looked like <b>at a given point in time</b>. This is useful
+                    to reconstruct how boundaries have changed over time. 
+                </p>
+                <a href="{% url 'import_shapefile' %}" class="button big">Upload now</a>
+            </div>
+        </header>
+
+        <div>
+            <h3>
+                {{ sources.all.count }} boundary datasets
+            </h3>
+
+            <table style="width:100%; font-weight:bold; overflow:hidden; border-spacing:0 10px; padding-bottom:100px; padding-left:40px">
+
+                <thead>
+                    <tr>
+                        <td style="width:65%">Dataset</td>
+                        <td style="width:25%">Boundaries</td>
+                        <td style="width:10%"></td>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for source in sources.all %}
+                    <tr>
+                        <td>{{ source.name }}</td>
+                        <td>{{ source.boundary_refs.all.count }}</td>
+                        <td><a class="button small" href="{% url 'source' source.pk %}">View</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+
+            </table>
+        </div>
+
+    </div>
+</section>
+
+{% endblock %}

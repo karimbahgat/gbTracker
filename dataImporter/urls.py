@@ -19,5 +19,6 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path('datasets', views.datasets, name='datasets'),
     path('import_shapefile', views.import_from_shapefile, name='import_shapefile'),
 ]
