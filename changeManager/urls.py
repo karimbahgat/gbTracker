@@ -22,6 +22,6 @@ urlpatterns = [
     path('source/<int:pk>/', views.source, name='source'),
     path('boundary_ref/<int:pk>/', views.boundary_ref, name='boundary_ref'),
     path('snapshots/<int:pk>/', views.snapshot, name='snapshot'),
-    path('api/snapshots/<int:pk>/', views.api_snapshots, name='api_snapshot'),
-    path('api/snapshots', views.api_snapshots, name='api_snapshots'),
+    path('api/boundaries/<int:pk>/', views.api_snapshot, name='api_boundary'),
+    path('api/boundaries', views.api_boundaries, name='api_boundaries'),
 ]

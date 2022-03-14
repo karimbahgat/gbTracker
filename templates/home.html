@@ -51,7 +51,6 @@
                 <thead>
                     <th>Date</th>
                     <th>Boundary</th>
-                    <th>Type</th>
                     <th>Source</th>
                     <th></th>
                 </thead>
@@ -133,11 +132,6 @@
             if ('match_score' in item) {
                 td.innerText += ' (' + item.match_score + '%)';
             };
-
-            // type
-            td = document.createElement('td');
-            tr.appendChild(td);
-            td.innerText = 'Snapshot';
 
             // source
             td = document.createElement('td');

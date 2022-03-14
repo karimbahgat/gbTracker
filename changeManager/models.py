@@ -47,6 +47,18 @@ class BoundaryReference(models.Model):
         full_name = ', '.join([ref.names.first().name for ref in all_refs])
         return full_name
 
+    def serialize(self):
+        boundary_refs = [{'id':p.id, 'names':[n.name for n in p.names.all()]}
+                        for p in self.get_all_parents()]
+        snaps = [{'event':model_to_dict(snap.event), 'geom':snap.geom.__geo_interface__}
+                for snap in self.snapshots]
+        source = self.source
+        return {'id':self.pk,
+                'snapshots':snaps,
+                'boundary_refs':boundary_refs,
+                'source':{'name':source.name, 'id':source.pk},
+                }
+
 class BoundaryName(models.Model):
     name = models.CharField(max_length=100)
 

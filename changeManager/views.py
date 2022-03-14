@@ -139,27 +139,19 @@ def _parse_date(dateval):
         return start,end
 
 @csrf_exempt
-def api_snapshot(request, pk):
+def api_boundary(request, pk):
     if request.method == 'GET':
-        snap = models.BoundarySnapshot.objects.get(pk=pk)
+        ref = models.BoundaryReference.objects.get(pk=pk)
         
         # serialize
-        def serialize_snapshot(m):
-            boundary_refs = [{'id':p.id, 'names':[n.name for n in p.names.all()]}
-                            for p in m.boundary_ref.get_all_parents()]
-            source = m.boundary_ref.source
-            return {'event':model_to_dict(m.event),
-                    'boundary_refs':boundary_refs,
-                    'source':{'name':source.name, 'id':source.pk},
-                    }
-        data = serialize_snapshot(snap)
+        data = ref.serialize()
 
         # return as json
         resp = JsonResponse(data)
         return resp
 
 @csrf_exempt
-def api_snapshots(request):
+def api_boundaries(request):
     if request.method == 'GET':
         # get one or more snapshots based on params
         print(request.GET)
@@ -169,8 +161,8 @@ def api_snapshots(request):
         datesearch = request.GET.get('date', None)
         if ids:
             ids = [int(x) for x in ids.split(',')]
-            matches = models.BoundarySnapshot.objects.filter(pk__in=ids)
-            count = matches.count()
+            refs = models.BoundaryReference.objects.filter(pk__in=ids)
+            count = refs.count()
         elif search:
             # build hierarchical search terms (lowest to highest)
             terms = [s.strip() for s in search.split(',') if s.strip()]
@@ -196,27 +188,27 @@ def api_snapshots(request):
                     # single search term
                     score = 1
                 ref_scores[ref.id] = score
-            # get any snapshot belonging to the matched refs or its immediate parent
+            # get any reference belonging to the matched refs or its immediate parent
             kwargs = {}
             if datesearch:
                 start,end = _parse_date(datesearch)
                 if start:
-                    kwargs['event__date_end__gte'] = start
+                    kwargs['snapshots__event__date_end__gte'] = start
                 if end:
-                    kwargs['event__date_start__lte'] = end
-            snaps = models.BoundarySnapshot.objects.filter(boundary_ref__in=refs, **kwargs) | models.BoundarySnapshot.objects.filter(boundary_ref__parent__in=refs, **kwargs)
-            # calc snapshot scores
+                    kwargs['snapshots__event__date_start__lte'] = end
+            refs = models.BoundarySnapshot.objects.filter(pk__in=refs, **kwargs) | models.BoundarySnapshot.objects.filter(parent__pk__in=refs, **kwargs)
+            # calc ref scores
             snap_scores = {}
-            for snap in snaps:
-                score = max([ref_scores.get(par.id,0) for par in snap.boundary_ref.get_all_parents()])
-                snap_scores[snap.id] = score
+            for ref in refs:
+                score = max([ref_scores.get(par.id,0) for par in ref.get_all_parents()])
+                snap_scores[ref.id] = score
             # sort
-            snaps = sorted(snaps, key=lambda snap: snap_scores[snap.id], reverse=True)
+            refs = sorted(refs, key=lambda ref: ref_scores[ref.id], reverse=True)
             # filter by threshold
             if search_thresh:
-                snaps = [snap for snap in snaps 
-                        if snap_scores[snap.id] >= float(search_thresh)]
-            count = len(snaps)
+                refs = [ref for ref in refs
+                        if ref_scores[ref.id] >= float(search_thresh)]
+            count = len(refs)
         else:
             # no name filtering
             if datesearch:
@@ -224,31 +216,22 @@ def api_snapshots(request):
                 start,end = _parse_date(datesearch)
                 kwargs = {}
                 if start:
-                    kwargs['event__date_end__gte'] = start
+                    kwargs['snapshots__event__date_end__gte'] = start
                 if end:
-                    kwargs['event__date_start__lte'] = end
-                snaps = models.BoundarySnapshot.objects.filter(**kwargs)
+                    kwargs['snapshots__event__date_start__lte'] = end
+                refs = models.BoundaryReference.objects.filter(**kwargs)
             else:
                 # get all snapshots
-                snaps = models.BoundarySnapshot.objects.all()
-            count = snaps.count()
+                refs = models.BoundaryReference.objects.all()
+            count = refs.count()
         # paginate (for now just return first X)
-        snaps = snaps[:100]
+        refs = refs[:100]
         # serialize
-        def serialize_snapshot(m):
-            boundary_refs = [{'id':p.id, 'names':[n.name for n in p.names.all()]}
-                            for p in m.boundary_ref.get_all_parents()]
-            source = m.boundary_ref.source
-            return {'id':m.id,
-                    'event':model_to_dict(m.event),
-                    'boundary_refs':boundary_refs,
-                    'source':{'name':source.name, 'id':source.pk},
-                    }
         if search:
-            results = [{'object':serialize_snapshot(m), 'match_score':snap_scores[m.id] * 100} 
-                        for m in snaps]
+            results = [{'object':m.serialize(), 'match_score':ref_scores[m.id] * 100} 
+                        for m in refs]
         else:
-            results = [{'object':serialize_snapshot(m)} for m in snaps]
+            results = [{'object':m.serialize()} for m in refs]
         # format results
         data = {'count':count, 'results':results}
         # return as json
