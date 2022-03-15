@@ -90,7 +90,7 @@
         };
         console.log(params)
         // fetch data from api
-        url = "{% url 'api_snapshots' %}";
+        url = "{% url 'api_boundaries' %}";
         request(url, params, 'GET')
             .then(response => response.json())
             .then(data => populateBoundaryTable(data));
@@ -112,19 +112,19 @@
         for (item of data.results) {
             tr = document.createElement('tr');
             tbody.appendChild(tr);
-            let snap = item.object;
+            let ref = item.object;
 
             // date
             td = document.createElement('td');
             tr.appendChild(td);
-            td.innerHTML = snap.event.date_start + ' &rarr; ' + snap.event.date_end;
+            td.innerHTML = item.date_start + ' &rarr; ' + item.date_end;
 
             // full name hierarchy
             td = document.createElement('td');
             tr.appendChild(td);
             names = [];
-            for (ref of snap.boundary_refs) {
-                names.push(ref.names[0]);
+            for (parent of ref.boundary_refs) {
+                names.push(parent.names[0]);
             };
             td.innerText = names.join(' / ');
             
@@ -137,9 +137,9 @@
             td = document.createElement('td');
             tr.appendChild(td);
             a = document.createElement('a');
-            console.log(snap.source);
-            a.href = 'source/'+snap.source.id+'/';
-            a.innerText = snap.source.name;
+            console.log(ref.source);
+            a.href = 'source/'+ref.source.id+'/';
+            a.innerText = ref.source.name;
             td.appendChild(a);
 
             // view button
@@ -148,7 +148,8 @@
             but = document.createElement('a');
             td.appendChild(but);
             but.className = "button small";
-            but.href = `/snapshots/${snap.id}/`
+            but.href = `/boundaries/${ref.id}/`
+            but.target = '_blank';
             but.innerText = 'View';
         };
     };

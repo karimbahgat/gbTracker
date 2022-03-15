@@ -8,23 +8,23 @@
 <link rel="stylesheet" href="{% static 'css/ol.css' %}" type="text/css">
 
 <style>
-    #hierarchy-and-info {
+    #main-section, #hierarchy-section {
         display:flex;
         flex-direction:row;
         gap:10px;
         width:100%;
     }
-    #hierarchy-div {
+    #main-map-div, #hierarchy-map-div {
         width:70%;
     }
     #hierarchy-data {
-        height:350px;
+        height:320px;
         overflow:auto;
     }
-    #info {
+    #info-div, #hierarchy-div {
         width:30%;
     }
-    #map {
+    #main-map, #hierarchy-map {
         width: 100%; 
         height: 400px;
     }
@@ -36,7 +36,7 @@
             <h1>Boundary reference</h1>
             <p>
                 {% for ref in boundary_ref.get_all_parents reversed %}
-                    <a href="{% url 'boundary_ref' ref.pk %}">{{ ref.names.all.0.name }}</a>
+                    <a href="{% url 'boundary' ref.pk %}">{{ ref.names.all.0.name }}</a>
                     {% if not forloop.last %}
                     &rarr;
                     {% endif %}
@@ -44,33 +44,11 @@
             </p>
         </header>
         <div>
-            <div id="hierarchy-and-info">
-                <div id="hierarchy-div" class="box">
-                    <h2>Boundary Hierarchy</h2>
-                    <div id="hierarchy-data">
-                        <ul>
-                            {% for entry in boundary_ref.get_all_children %}
-                                <li>
-                                    <a href="{% url 'boundary_ref' entry.item.pk %}">
-                                    {{ entry.item.names.all.0.name }}
-                                    </a>
-                                </li>
-                                {% if entry.children %}
-                                    <ul>
-                                    {% for subentry in entry.children %}
-                                    <li>
-                                        <a href="{% url 'boundary_ref' subentry.item.pk %}">
-                                        {{ subentry.item.names.all.0.name }}
-                                        </a>
-                                    </li>
-                                    {% endfor %}
-                                    </ul>
-                                {% endif %}
-                            {% endfor %}
-                        </ul>
-                    </div>
+            <div id="main-section">
+                <div id="main-map-div">
+                    <div id="main-map"></div>
                 </div>
-                <div id="info" class="box">
+                <div id="info-div" class="box">
                     <h3>Names</h3>
                     <p>
                         {% for name in boundary_ref.names.all %}
@@ -88,7 +66,7 @@
                     <ul>
                         {% for snap in boundary_ref.snapshots.all %}
                             <li>
-                                <a href="{% url 'snapshot' snap.pk %}">
+                                <a href="">
                                     {{ snap.event.date_start }}
                                     &rarr;
                                     {{ snap.event.date_end }}
@@ -98,24 +76,65 @@
                     </ul>
                 </div>
             </div>
-            <div id="map-div">
-                <h2>Map Hierarchy</h2>
-                <div id="map"></div>
+
+            <hr>
+
+            <h3>Subdivisions</h3>
+            
+            <div id="hierarchy-section">
+                <div id="hierarchy-map-div">
+                    <div id="hierarchy-map"></div>
+                </div>
+                <div id="hierarchy-div" class="box">
+                    <h3>Boundary Hierarchy</h3>
+                    <div id="hierarchy-data">
+                        <ul>
+                            {% for entry in boundary_ref.get_all_children %}
+                                <li>
+                                    <a href="{% url 'boundary' entry.item.pk %}">
+                                    {{ entry.item.names.all.0.name }}
+                                    </a>
+                                </li>
+                                {% if entry.children %}
+                                    <ul>
+                                    {% for subentry in entry.children %}
+                                    <li>
+                                        <a href="{% url 'boundary' subentry.item.pk %}">
+                                        {{ subentry.item.names.all.0.name }}
+                                        </a>
+                                    </li>
+                                    {% endfor %}
+                                    </ul>
+                                {% endif %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </section>
 
 <script>
+    /////////////
+    // main map
+
     // layer
-    var layer = new ol.layer.Vector({
+    var mainLayer = new ol.layer.Vector({
         source: new ol.source.Vector(),
         //style: style,
     });
 
+    // data
+    mainGeojsonData = {{ main_geojson|safe }};
+    if (mainGeojsonData) {
+        feat = new ol.format.GeoJSON().readFeature(mainGeojsonData, {dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857'});
+        mainLayer.getSource().addFeature(feat);
+    };
+
     // map
-    var map = new ol.Map({
-        target: 'map',
+    var mainMap = new ol.Map({
+        target: 'main-map',
         controls: ol.control.defaults().extend([new ol.control.FullScreen(),
                                                 new ol.control.ScaleLine({units: 'metric'}),
                                                 ]),
@@ -128,7 +147,7 @@
                 maxZoom: 20,
                 crossOrigin: 'anonymous' // necessary for converting map to img during pdf generation: https://stackoverflow.com/questions/66671183/how-to-export-map-image-in-openlayer-6-without-cors-problems-tainted-canvas-iss
             })}),
-            layer,
+            mainLayer,
         ],
         view: new ol.View({
             center: ol.proj.fromLonLat([0,0]),
@@ -136,7 +155,53 @@
         })
     });
 
-    //map.getView().fit(layer.getSource().getExtent());
+    if (mainGeojsonData) {
+        mainMap.getView().fit(mainLayer.getSource().getExtent());
+    };
+
+    /////////////////
+    // hierarchy map
+    
+    // layer
+    var hierarchyLayer = new ol.layer.Vector({
+        source: new ol.source.Vector(),
+        //style: style,
+    });
+
+    // data
+    hierarchyGeojsonData = {{ hier_geojson|safe }};
+    if (hierarchyGeojsonData) {
+        feats = new ol.format.GeoJSON().readFeatures(hierarchyGeojsonData, {dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857'});
+        hierarchyLayer.getSource().addFeatures(feats);
+    };
+
+    // map
+    var hierarchyMap = new ol.Map({
+        target: 'hierarchy-map',
+        controls: ol.control.defaults().extend([new ol.control.FullScreen(),
+                                                new ol.control.ScaleLine({units: 'metric'}),
+                                                ]),
+        layers: [
+        new ol.layer.Tile({
+            source: new ol.source.XYZ({
+                attributions: 'Satellite Imagery <a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> ',
+                url:
+                'https://api.maptiler.com/tiles/satellite/{z}/{x}/{y}.jpg?key=' + 'aknzJQRnZg32XVVPrcYH',
+                maxZoom: 20,
+                crossOrigin: 'anonymous' // necessary for converting map to img during pdf generation: https://stackoverflow.com/questions/66671183/how-to-export-map-image-in-openlayer-6-without-cors-problems-tainted-canvas-iss
+            })}),
+            hierarchyLayer,
+        ],
+        view: new ol.View({
+            center: ol.proj.fromLonLat([0,0]),
+            zoom: 1
+        })
+    });
+
+    if (hierarchyGeojsonData) {
+        hierarchyMap.getView().fit(hierarchyLayer.getSource().getExtent());
+    };
+
 
 </script>
 

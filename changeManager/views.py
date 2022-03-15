@@ -21,14 +21,39 @@ def source(request, pk):
     elif src.type == 'MapSource':
         return render(request, 'source_map.html', context)
 
-def boundary_ref(request, pk):
-    '''View of a snapshot instance.'''
+def boundary(request, pk):
+    '''View of a boundary ref instance.'''
     ref = models.BoundaryReference.objects.get(pk=pk)
-    context = {'boundary_ref':ref}
+    # main snapshot
+    snap = ref.snapshots.first()
+    if snap:
+        geom = snap.geom.__geo_interface__
+        main_geoj = {'type':'Feature', 'geometry':geom}
+        main_geoj = json.dumps(main_geoj)
+    else:
+        main_geoj = 'null'
+    # hierarchy snapshots
+    subrefs = ref.children.all()
+    if subrefs:
+        hier_geoj = {'type':'FeatureCollection', 'features':[]}
+        for subref in subrefs:
+            snap = subref.snapshots.first()
+            if snap:
+                geom = snap.geom.__geo_interface__
+                feat = {'type':'Feature', 'geometry':geom}
+                hier_geoj['features'].append(feat)
+        hier_geoj = json.dumps(hier_geoj)
+    else:
+        hier_geoj = 'null'
+    context = {'boundary_ref':ref, 
+                'main_geojson':main_geoj,
+                'hier_geojson':hier_geoj,
+                }
     return render(request, 'boundaryref.html', context)
 
+'''
 def snapshot(request, pk):
-    '''View of a snapshot instance.'''
+    #''View of a snapshot instance.''
     snap = models.BoundarySnapshot.objects.get(pk=pk)
     geom = snap.geom.__geo_interface__
     geoj = {'type':'Feature', 'geometry':geom}
@@ -71,6 +96,7 @@ def snapshot(request, pk):
                 'mindate':min(date_starts), 'maxdate':max(date_ends),
                 'ticks':ticks}
     return render(request, 'snapshot.html', context)
+'''
 
 # API
 
@@ -171,7 +197,7 @@ def api_boundaries(request):
             #print(refs.query)
             #print(refs.explain())
             # calc match score by adding parent filters based on additional search terms
-            ref_scores = {}
+            _ref_scores = {}
             for ref in refs:
                 if len(terms) > 1:
                     # hierarchical search terms
@@ -187,7 +213,7 @@ def api_boundaries(request):
                 else:
                     # single search term
                     score = 1
-                ref_scores[ref.id] = score
+                _ref_scores[ref.id] = score
             # get any reference belonging to the matched refs or its immediate parent
             kwargs = {}
             if datesearch:
@@ -196,12 +222,12 @@ def api_boundaries(request):
                     kwargs['snapshots__event__date_end__gte'] = start
                 if end:
                     kwargs['snapshots__event__date_start__lte'] = end
-            refs = models.BoundarySnapshot.objects.filter(pk__in=refs, **kwargs) | models.BoundarySnapshot.objects.filter(parent__pk__in=refs, **kwargs)
-            # calc ref scores
-            snap_scores = {}
+            refs = models.BoundaryReference.objects.filter(pk__in=refs, **kwargs) | models.BoundaryReference.objects.filter(parent__pk__in=refs, **kwargs)
+            # calc final ref scores
+            ref_scores = {}
             for ref in refs:
-                score = max([ref_scores.get(par.id,0) for par in ref.get_all_parents()])
-                snap_scores[ref.id] = score
+                score = max([_ref_scores.get(par.id,0) for par in ref.get_all_parents()])
+                ref_scores[ref.id] = score
             # sort
             refs = sorted(refs, key=lambda ref: ref_scores[ref.id], reverse=True)
             # filter by threshold
@@ -228,10 +254,17 @@ def api_boundaries(request):
         refs = refs[:100]
         # serialize
         if search:
-            results = [{'object':m.serialize(), 'match_score':ref_scores[m.id] * 100} 
+            results = [{'object':m.serialize(), 'match_score':ref_scores[m.id] * 100,
+                        } 
                         for m in refs]
         else:
             results = [{'object':m.serialize()} for m in refs]
+        # add min/max dates for which snapshots are available, or none
+        for item in results:
+            starts = [s['event']['date_start'] for s in item['object']['snapshots']]
+            ends = [s['event']['date_end'] for s in item['object']['snapshots']]
+            item['date_start'] = min(starts) if starts else None
+            item['date_end'] = min(ends) if ends else None
         # format results
         data = {'count':count, 'results':results}
         # return as json
