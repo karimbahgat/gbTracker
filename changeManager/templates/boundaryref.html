@@ -8,106 +8,99 @@
 <link rel="stylesheet" href="{% static 'css/ol.css' %}" type="text/css">
 
 <style>
-    #main-section, #hierarchy-section {
+    #main-section {
         display:flex;
         flex-direction:row;
         gap:10px;
         width:100%;
     }
-    #main-map-div, #hierarchy-map-div {
+    #map-div {
         width:70%;
     }
     #hierarchy-data {
-        height:320px;
+        height:85%;
         overflow:auto;
     }
-    #info-div, #hierarchy-div {
+    #sidepanel {
         width:30%;
+        height:400px;
     }
-    #main-map, #hierarchy-map {
+    #info-div {
+        height:30%;
+        margin-bottom:5px;
+    }
+    #hierarchy-div {
+        height:70%;
+    }
+    #map {
         width: 100%; 
         height: 400px;
+    }
+    #source {
+        font-style:italic;
     }
 </style>
 
 <section>
     <div class="content">
         <header>
-            <h1>Boundary reference</h1>
-            <p>
+            <h2>
+                Boundary: &nbsp;
                 {% for ref in boundary_ref.get_all_parents reversed %}
                     <a href="{% url 'boundary' ref.pk %}">{{ ref.names.all.0.name }}</a>
                     {% if not forloop.last %}
                     &rarr;
                     {% endif %}
                 {% endfor %}
+            </h2>
+            <p>
+                <span id="source">Source: <a href="{% url 'source' boundary_ref.source.id %}">{{ boundary_ref.source.name }}</a></span>
             </p>
         </header>
-        <div>
+        <div>            
             <div id="main-section">
-                <div id="main-map-div">
-                    <div id="main-map"></div>
+                <div id="map-div">
+                    <div id="map"></div>
                 </div>
-                <div id="info-div" class="box">
-                    <h3>Names</h3>
-                    <p>
-                        {% for name in boundary_ref.names.all %}
-                            {{ name.name }}
-                            {% if not forloop.last %}
-                            ,
-                            {% endif %}
-                        {% endfor %}
-                    </p>
-
-                    <h3>Identifiers</h3>
-                    <p>[None]</p>
-
-                    <h3>Snapshot</h3>
-                    <ul>
-                        {% for snap in boundary_ref.snapshots.all %}
-                            <li>
-                                <a href="">
-                                    {{ snap.event.date_start }}
-                                    &rarr;
-                                    {{ snap.event.date_end }}
-                                </a>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </div>
-
-            <hr>
-
-            <h3>Subdivisions</h3>
-            
-            <div id="hierarchy-section">
-                <div id="hierarchy-map-div">
-                    <div id="hierarchy-map"></div>
-                </div>
-                <div id="hierarchy-div" class="box">
-                    <h3>Boundary Hierarchy</h3>
-                    <div id="hierarchy-data">
+                <div id="sidepanel">
+                    <div id="info-div" class="box">
+                        <h3>Time period</h3>
                         <ul>
-                            {% for entry in boundary_ref.get_all_children %}
+                            {% for snap in boundary_ref.snapshots.all %}
                                 <li>
-                                    <a href="{% url 'boundary' entry.item.pk %}">
-                                    {{ entry.item.names.all.0.name }}
+                                    <a href="">
+                                        {{ snap.event.date_start }}
+                                        &rarr;
+                                        {{ snap.event.date_end }}
                                     </a>
                                 </li>
-                                {% if entry.children %}
-                                    <ul>
-                                    {% for subentry in entry.children %}
-                                    <li>
-                                        <a href="{% url 'boundary' subentry.item.pk %}">
-                                        {{ subentry.item.names.all.0.name }}
-                                        </a>
-                                    </li>
-                                    {% endfor %}
-                                    </ul>
-                                {% endif %}
                             {% endfor %}
                         </ul>
+                    </div>
+                    <div id="hierarchy-div" class="box">
+                        <h3>Subdivisions</h3>
+                        <div id="hierarchy-data">
+                            <ul>
+                                {% for entry in boundary_ref.get_all_children %}
+                                    <li>
+                                        <a href="{% url 'boundary' entry.item.pk %}">
+                                        {{ entry.item.names.all.0.name }}
+                                        </a>
+                                    </li>
+                                    {% if entry.children %}
+                                        <ul>
+                                        {% for subentry in entry.children %}
+                                        <li>
+                                            <a href="{% url 'boundary' subentry.item.pk %}">
+                                            {{ subentry.item.names.all.0.name }}
+                                            </a>
+                                        </li>
+                                        {% endfor %}
+                                        </ul>
+                                    {% endif %}
+                                {% endfor %}
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -120,9 +113,32 @@
     // main map
 
     // layer
+    var mainStyle = new ol.style.Style({
+        fill: new ol.style.Fill({
+            color: 'rgba(255, 220, 220, 0.3)'
+        }),
+        stroke: new ol.style.Stroke({
+            color: 'rgba(255, 0, 0, 0.8)',
+            width: 2
+        }),
+    });
     var mainLayer = new ol.layer.Vector({
         source: new ol.source.Vector(),
-        //style: style,
+        style: mainStyle,
+    });
+    var hierarchyStyle = new ol.style.Style({
+        fill: new ol.style.Fill({
+            color: 'rgba(255, 255, 255, 0)', // fully transparent
+        }),
+        stroke: new ol.style.Stroke({
+            color: 'rgba(255, 0, 0, 0.8)',
+            width: 1,
+            lineDash: [10,10]
+        }),
+    });
+    var hierarchyLayer = new ol.layer.Vector({
+        source: new ol.source.Vector(),
+        style: hierarchyStyle,
     });
 
     // data
@@ -131,10 +147,15 @@
         feat = new ol.format.GeoJSON().readFeature(mainGeojsonData, {dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857'});
         mainLayer.getSource().addFeature(feat);
     };
+    hierarchyGeojsonData = {{ hier_geojson|safe }};
+    if (hierarchyGeojsonData) {
+        feats = new ol.format.GeoJSON().readFeatures(hierarchyGeojsonData, {dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857'});
+        hierarchyLayer.getSource().addFeatures(feats);
+    };
 
     // map
-    var mainMap = new ol.Map({
-        target: 'main-map',
+    var map = new ol.Map({
+        target: 'map',
         controls: ol.control.defaults().extend([new ol.control.FullScreen(),
                                                 new ol.control.ScaleLine({units: 'metric'}),
                                                 ]),
@@ -148,6 +169,7 @@
                 crossOrigin: 'anonymous' // necessary for converting map to img during pdf generation: https://stackoverflow.com/questions/66671183/how-to-export-map-image-in-openlayer-6-without-cors-problems-tainted-canvas-iss
             })}),
             mainLayer,
+            hierarchyLayer
         ],
         view: new ol.View({
             center: ol.proj.fromLonLat([0,0]),
@@ -156,50 +178,9 @@
     });
 
     if (mainGeojsonData) {
-        mainMap.getView().fit(mainLayer.getSource().getExtent());
-    };
-
-    /////////////////
-    // hierarchy map
-    
-    // layer
-    var hierarchyLayer = new ol.layer.Vector({
-        source: new ol.source.Vector(),
-        //style: style,
-    });
-
-    // data
-    hierarchyGeojsonData = {{ hier_geojson|safe }};
-    if (hierarchyGeojsonData) {
-        feats = new ol.format.GeoJSON().readFeatures(hierarchyGeojsonData, {dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857'});
-        hierarchyLayer.getSource().addFeatures(feats);
-    };
-
-    // map
-    var hierarchyMap = new ol.Map({
-        target: 'hierarchy-map',
-        controls: ol.control.defaults().extend([new ol.control.FullScreen(),
-                                                new ol.control.ScaleLine({units: 'metric'}),
-                                                ]),
-        layers: [
-        new ol.layer.Tile({
-            source: new ol.source.XYZ({
-                attributions: 'Satellite Imagery <a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> ',
-                url:
-                'https://api.maptiler.com/tiles/satellite/{z}/{x}/{y}.jpg?key=' + 'aknzJQRnZg32XVVPrcYH',
-                maxZoom: 20,
-                crossOrigin: 'anonymous' // necessary for converting map to img during pdf generation: https://stackoverflow.com/questions/66671183/how-to-export-map-image-in-openlayer-6-without-cors-problems-tainted-canvas-iss
-            })}),
-            hierarchyLayer,
-        ],
-        view: new ol.View({
-            center: ol.proj.fromLonLat([0,0]),
-            zoom: 1
-        })
-    });
-
-    if (hierarchyGeojsonData) {
-        hierarchyMap.getView().fit(hierarchyLayer.getSource().getExtent());
+        map.getView().fit(mainLayer.getSource().getExtent());
+    } else if (hierarchyGeojsonData) {
+        map.getView().fit(hierarchyLayer.getSource().getExtent());
     };
 
 
