@@ -13,7 +13,8 @@ import json
 def source(request, pk):
     '''View of a source'''
     src = models.BoundarySource.objects.get(pk=pk)
-    context = {'source':src}
+    toplevel_refs = src.boundary_refs.filter(parent=None)
+    context = {'source':src, 'toplevel_refs':toplevel_refs}
     if src.type == 'TextSource':
         raise NotImplementedError()
     elif src.type == 'DataSource':

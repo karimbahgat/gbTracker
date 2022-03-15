@@ -10,10 +10,32 @@
 <section>
     <div class="content">
         <header>
-            <h2 style="text-align:center">
-                <img height="20px" src="{% static 'changeManager/images/source.png' %}">
-                {{ source.name }}
+            <h2 style="text-align:left">
+                Source: &nbsp;&nbsp;{{ source.name }}
             </h2>
+            <p>
+                <span style="vertical-align:top">Type: 
+                Dataset <img height="20px" style="display:none" src="{% static 'changeManager/images/source.png' %}">
+                </span>
+
+                <br>
+
+                <span style="vertical-align:top">URL: 
+                <a href="{{ source.url }}">{{ source.url }}</a>
+                </span>
+
+                <br>
+            
+                <span style="vertical-align:top">Citation: 
+                {{ source.citation }}
+                </span>
+
+                <br>
+            
+                <span style="vertical-align:top">Source Note: 
+                {{ source.note }}
+                </span>
+            </p>
         </header>
 
         <div>
@@ -27,26 +49,11 @@
                     }
             </style>
 
-            <div class="box">
-                <div class="row">
-                    <span style="width:20%; text-align:right; vertical-align:top">URL</span>
-                    <span style="font-weight:normal"><a href="{{ source.url }}">{{ source.url }}</a></span>
-                </div>
-                <div class="row">
-                    <span style="width:20%; text-align:right; vertical-align:top">Citation</span>
-                    <span style="font-weight:normal; padding-bottom:20px">{{ source.citation }}</span>
-                </div>
-                <div class="row">
-                    <span style="width:20%; text-align:right; vertical-align:top">Source Note</span>
-                    <span style="font-weight:normal; padding-bottom:20px">{{ source.note }}</span>
-                </div>
-            </div>
-
             <h3>
-                {{ source.boundary_refs.all.count }} toplevel boundary definitions
+                {{ toplevel_refs.count }} toplevel boundary definitions
             </h3>
 
-            <table style="width:100%; font-weight:bold; overflow:hidden; border-spacing:0 10px; padding-bottom:100px; padding-left:40px">
+            <table style="width:98%; margin-left:2%; font-weight:bold; overflow:hidden; border-spacing:0 10px; padding-bottom:100px; padding-left:40px">
 
                 <thead>
                     <tr>
@@ -57,7 +64,7 @@
                 </thead>
 
                 <tbody>
-                    {% for ref in source.boundary_refs.all %}
+                    {% for ref in toplevel_refs.all %}
                     <tr>
                         <td>{{ ref.names.first.name }}</td>
                         <td>{{ ref.children.all.count }}</td>
