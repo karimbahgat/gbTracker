@@ -1,0 +1,259 @@
+{% extends "templates/base.html" %}
+
+{% load static %}
+
+{% block page_content %}
+
+<!-- Banner -->
+<section id="banner">
+    <div class="content">
+        <header>
+            <h1>geoBoundary Tracker</h1>
+            <p>Open-source community-driven database for tracking changes to political administrative
+                boundaries.</p>
+        </header>
+        <p>Built by the <a href="https://github.com/wmgeolab/geoBoundaries/graphs/contributors">community</a> and <a href="https://geolab.wm.edu">William & Mary geoLab</a>, the geoBoundary Tracker
+            is an online tool and database tracking and reconstructing how boundaries (i.e., state, county)
+            change over time for every country in the world. We currently track approximately 1 million boundaries within over 200 entities,
+            including all 195 UN member states. All boundaries are available to view or download in
+            common file formats, including
+            shapefiles;
+            the only requirement for use is <a href="index.html#citation">acknowledgement</a>.
+        </p>
+        <ul class="actions">
+            <li><a href="#explore-data" class="button big">Explore the Data</a></li>
+            <li><a href="#getting-involved" class="button big">Get Involved</a></li>
+        </ul>
+    </div>
+</section>
+
+
+
+
+
+<!-- Explore the data -->
+<section>
+    <header class="major">
+        <h2 id="explore-data">Explore the data</h2>
+    </header>
+    <div>
+        <p>
+            Below you can browse and explore the raw data registered for each country.
+        </p>
+        <div id="rawdata-params" style="display:flex; flex-direction:row">
+            <input type="text" name="date" placeholder="Filter by time period" autocomplete="off" oninput="fetchBoundaryData()" style="width:30%">
+            <input type="text" name="search" placeholder="Filter by boundary name" autocomplete="off" oninput="fetchBoundaryData()">
+            <button type="button" onclick="fetchBoundaryData()">Filter</button>
+        </div>
+        <span id="search-status" style="margin-left:10px"></span>
+        <div style="height:400px; overflow:auto; margin-top:20px">
+            <table id="rawdata-table" style="width:100%">
+                <thead>
+                    <th>Date</th>
+                    <th>Boundary</th>
+                    <th>Source</th>
+                    <th></th>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<script>
+    // simple get/post data function
+    // https://medium.com/meta-box/how-to-send-get-and-post-requests-with-javascript-fetch-api-d0685b7ee6ed
+    const request = ( url, params = {}, method = 'GET' ) => {
+        let options = {
+            method
+        };
+        if ( 'GET' === method ) {
+            url += '?' + ( new URLSearchParams( params ) ).toString();
+        } else {
+            options.body = JSON.stringify( params );
+        }
+        
+        return fetch( url, options );
+    };
+
+    function fetchBoundaryData() {
+        // clear results
+        document.getElementById('search-status').innerHTML = 'Loading data...';
+        tbody = document.querySelector('#rawdata-table tbody');
+        tbody.innerHTML = '';
+        // get user params
+        params = {}
+        inputs = document.getElementById('rawdata-params').querySelectorAll('input');
+        for (elem of inputs) {
+            params[elem.name] = elem.value;
+        };
+        console.log(params)
+        // fetch data from api
+        url = "{% url 'api_boundaries' %}";
+        request(url, params, 'GET')
+            .then(response => response.json())
+            .then(data => populateBoundaryTable(data));
+    };
+
+    function populateBoundaryTable(data) {
+        // clear results again
+        if (data.count == 0) {
+            showing = 0;
+        } else {
+            showing = `1-${data.results.length}`;
+        };
+        document.getElementById('search-status').innerHTML = `Showing ${showing} of ${data.count}`;
+        tbody = document.querySelector('#rawdata-table tbody');
+        tbody.innerHTML = '';
+        // populate table
+        console.log(data);
+        tbody = document.querySelector('#rawdata-table tbody');
+        for (item of data.results) {
+            tr = document.createElement('tr');
+            tbody.appendChild(tr);
+            let ref = item.object;
+
+            // date
+            td = document.createElement('td');
+            tr.appendChild(td);
+            td.innerHTML = item.date_start + ' &rarr; ' + item.date_end;
+
+            // full name hierarchy
+            td = document.createElement('td');
+            tr.appendChild(td);
+            names = [];
+            for (parent of ref.boundary_refs) {
+                names.push(parent.names[0]);
+            };
+            td.innerText = names.join(' / ');
+            
+            // add match score
+            if ('match_score' in item) {
+                td.innerText += ' (' + item.match_score + '%)';
+            };
+
+            // source
+            td = document.createElement('td');
+            tr.appendChild(td);
+            a = document.createElement('a');
+            console.log(ref.source);
+            a.href = 'source/'+ref.source.id+'/';
+            a.innerText = ref.source.name;
+            td.appendChild(a);
+
+            // view button
+            td = document.createElement('td');
+            tr.appendChild(td);
+            but = document.createElement('a');
+            td.appendChild(but);
+            but.className = "button small";
+            but.href = `/boundaries/${ref.id}/`
+            but.target = '_blank';
+            but.innerText = 'View';
+        };
+    };
+
+    fetchBoundaryData();
+
+</script>
+
+
+
+
+
+<!-- Getting involved -->
+<style>
+    .row-feature {
+        display:flex;
+        flex-direction:row;
+        align-items:top;
+        margin-bottom:40px;
+    }
+    .row-feature-icon {
+    }
+    .row-feature-icon img {
+        height:200px;
+        width:200px;
+        border-radius:50%;
+    }
+    .row-feature-content {
+        margin:10px;
+    }
+</style>
+
+<section>
+    <header class="major">
+        <h2 id="getting-involved">Getting involved</h2>
+    </header>
+    <div>
+        <div class="row-feature">
+            <div class="row-feature-icon">
+                <img src="https://squarecircles.com/wp-content/uploads/2018/10/rowofbooks.jpg"/>
+            </div>
+            <div class="row-feature-content">
+                <h3>Register a change event</h3>
+                <p>
+                    In some cases, we may not know the exact depiction of what a boundary 
+                    looked like, but perhaps we have a <b>text-based source</b> telling us that
+                    on some date a boundary underwent a change, like <b>changed its name, 
+                    split up, or merged</b> with another boundary. By combining this information
+                    with other data points, we can reconstruct the boundary delineation before or 
+                    after the reported change.
+                </p>
+                <a href="" class="button big">Add now</a>
+            </div>
+        </div>
+        <div class="row-feature">
+            <div class="row-feature-icon">
+                <img src="{% static 'images/boundarydata.png' %}"/>
+            </div>
+            <div class="row-feature-content">
+                <h3>Upload boundary data</h3>
+                <p>
+                    Uploading boundary data and associated temporal metadata 
+                    helps by providing an "anchor point" or a <b>snapshot</b> of what a set of
+                    boundaries looked like <b>at a given point in time</b>. This is useful
+                    to reconstruct how boundaries have changed over time. 
+                </p>
+                <a href="{% url 'datasets' %}" class="button big">Upload now</a>
+            </div>
+        </div>
+        <div class="row-feature">
+            <div class="row-feature-icon">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/C%C3%B4te_d%27Ivoire_Map.jpg/602px-C%C3%B4te_d%27Ivoire_Map.jpg"/>
+            </div>
+            <div class="row-feature-content">
+                <h3>Digitize from map data</h3>
+                <p>
+                    If boundary data is not available, additional information can be sought from
+                    maps that depict country boundary outlines at a particular point in time. 
+                    Digitizing or extracting <b>map boundary outlines</b> helps to turn this information
+                    into useful boundary snapshots. 
+                </p>
+                <a href="{% url 'digitize_map' %}" class="button big">Digitize now</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+
+
+<!-- Sponsors -->
+<section id="banner">
+    <div class="content" id="sponsors">
+        <header>
+            <h1>Partners, Sponsors & Contributors</h1>
+            <p>Thanks to our partners, sponsors, and <a
+                    href="https://github.com/wmgeolab/geoBoundaries/graphs/contributors">community of
+                    contributors</a> for making geoBoundaries possible. </p>
+        </header>
+
+            <span style="width:300px !important; float:left; text-align:center;"><img style="max-height:80px;max-width:300px;height:auto;width:auto;vertical-align:middle;margin:10px 10px 10px 10px;"
+                        src="{% static 'images/wm.png' %}" alt=""></span>
+
+    </div>
+</section>
+
+{% endblock %}

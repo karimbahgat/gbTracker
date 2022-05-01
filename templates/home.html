@@ -4,6 +4,9 @@
 
 {% block page_content %}
 
+<script src="{% static 'js/ol.js' %}"></script>
+<link rel="stylesheet" href="{% static 'css/ol.css' %}" type="text/css">
+
 <!-- Banner -->
 <section id="banner">
     <div class="content">
@@ -20,10 +23,6 @@
             shapefiles;
             the only requirement for use is <a href="index.html#citation">acknowledgement</a>.
         </p>
-        <ul class="actions">
-            <li><a href="#explore-data" class="button big">Explore the Data</a></li>
-            <li><a href="#getting-involved" class="button big">Get Involved</a></li>
-        </ul>
     </div>
 </section>
 
@@ -34,208 +33,160 @@
 <!-- Explore the data -->
 <section>
     <header class="major">
-        <h2 id="explore-data">Explore the data</h2>
+        <h2 id="explore-data">Explore the Data</h2>
     </header>
     <div>
         <p>
-            Below you can browse and explore the raw data registered for each country.
+            Click a country below to explore its administrative boundaries.
         </p>
-        <div id="rawdata-params" style="display:flex; flex-direction:row">
-            <input type="text" name="date" placeholder="Filter by time period" autocomplete="off" oninput="fetchBoundaryData()" style="width:30%">
-            <input type="text" name="search" placeholder="Filter by boundary name" autocomplete="off" oninput="fetchBoundaryData()">
-            <button type="button" onclick="fetchBoundaryData()">Filter</button>
+        <div id="map">
         </div>
-        <span id="search-status" style="margin-left:10px"></span>
-        <div style="height:400px; overflow:auto; margin-top:20px">
-            <table id="rawdata-table" style="width:100%">
+        <div style="height:400px; overflow:auto; margin-top:50px">
+            <table style="width:100%">
                 <thead>
-                    <th>Date</th>
-                    <th>Boundary</th>
-                    <th>Source</th>
+                    <th>Country</th>
+                    <th>Boundaries</th>
+                    <th>Sources</th>
                     <th></th>
                 </thead>
                 <tbody>
+                    {% for country in countries %}
+                        <tr>
+                            <td>{{ country }}</td>
+                            <td></td>
+                            <td></td>
+                            <td>
+                                <a class="button small" href="" target="_blank">View</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
 </section>
 
-<script>
-    // simple get/post data function
-    // https://medium.com/meta-box/how-to-send-get-and-post-requests-with-javascript-fetch-api-d0685b7ee6ed
-    const request = ( url, params = {}, method = 'GET' ) => {
-        let options = {
-            method
-        };
-        if ( 'GET' === method ) {
-            url += '?' + ( new URLSearchParams( params ) ).toString();
-        } else {
-            options.body = JSON.stringify( params );
-        }
-        
-        return fetch( url, options );
-    };
-
-    function fetchBoundaryData() {
-        // clear results
-        document.getElementById('search-status').innerHTML = 'Loading data...';
-        tbody = document.querySelector('#rawdata-table tbody');
-        tbody.innerHTML = '';
-        // get user params
-        params = {}
-        inputs = document.getElementById('rawdata-params').querySelectorAll('input');
-        for (elem of inputs) {
-            params[elem.name] = elem.value;
-        };
-        console.log(params)
-        // fetch data from api
-        url = "{% url 'api_boundaries' %}";
-        request(url, params, 'GET')
-            .then(response => response.json())
-            .then(data => populateBoundaryTable(data));
-    };
-
-    function populateBoundaryTable(data) {
-        // clear results again
-        if (data.count == 0) {
-            showing = 0;
-        } else {
-            showing = `1-${data.results.length}`;
-        };
-        document.getElementById('search-status').innerHTML = `Showing ${showing} of ${data.count}`;
-        tbody = document.querySelector('#rawdata-table tbody');
-        tbody.innerHTML = '';
-        // populate table
-        console.log(data);
-        tbody = document.querySelector('#rawdata-table tbody');
-        for (item of data.results) {
-            tr = document.createElement('tr');
-            tbody.appendChild(tr);
-            let ref = item.object;
-
-            // date
-            td = document.createElement('td');
-            tr.appendChild(td);
-            td.innerHTML = item.date_start + ' &rarr; ' + item.date_end;
-
-            // full name hierarchy
-            td = document.createElement('td');
-            tr.appendChild(td);
-            names = [];
-            for (parent of ref.boundary_refs) {
-                names.push(parent.names[0]);
-            };
-            td.innerText = names.join(' / ');
-            
-            // add match score
-            if ('match_score' in item) {
-                td.innerText += ' (' + item.match_score + '%)';
-            };
-
-            // source
-            td = document.createElement('td');
-            tr.appendChild(td);
-            a = document.createElement('a');
-            console.log(ref.source);
-            a.href = 'source/'+ref.source.id+'/';
-            a.innerText = ref.source.name;
-            td.appendChild(a);
-
-            // view button
-            td = document.createElement('td');
-            tr.appendChild(td);
-            but = document.createElement('a');
-            td.appendChild(but);
-            but.className = "button small";
-            but.href = `/boundaries/${ref.id}/`
-            but.target = '_blank';
-            but.innerText = 'View';
-        };
-    };
-
-    fetchBoundaryData();
-
-</script>
-
-
-
-
-
-<!-- Getting involved -->
 <style>
-    .row-feature {
-        display:flex;
-        flex-direction:row;
-        align-items:top;
-        margin-bottom:40px;
-    }
-    .row-feature-icon {
-    }
-    .row-feature-icon img {
-        height:200px;
-        width:200px;
-        border-radius:50%;
-    }
-    .row-feature-content {
-        margin:10px;
+    #map {
+        width: 100%;
+        height: 400px;
     }
 </style>
 
-<section>
-    <header class="major">
-        <h2 id="getting-involved">Getting involved</h2>
-    </header>
-    <div>
-        <div class="row-feature">
-            <div class="row-feature-icon">
-                <img src="https://squarecircles.com/wp-content/uploads/2018/10/rowofbooks.jpg"/>
-            </div>
-            <div class="row-feature-content">
-                <h3>Register a change event</h3>
-                <p>
-                    In some cases, we may not know the exact depiction of what a boundary 
-                    looked like, but perhaps we have a <b>text-based source</b> telling us that
-                    on some date a boundary underwent a change, like <b>changed its name, 
-                    split up, or merged</b> with another boundary. By combining this information
-                    with other data points, we can reconstruct the boundary delineation before or 
-                    after the reported change.
-                </p>
-                <a href="" class="button big">Add now</a>
-            </div>
-        </div>
-        <div class="row-feature">
-            <div class="row-feature-icon">
-                <img src="{% static 'images/boundarydata.png' %}"/>
-            </div>
-            <div class="row-feature-content">
-                <h3>Upload boundary data</h3>
-                <p>
-                    Uploading boundary data and associated temporal metadata 
-                    helps by providing an "anchor point" or a <b>snapshot</b> of what a set of
-                    boundaries looked like <b>at a given point in time</b>. This is useful
-                    to reconstruct how boundaries have changed over time. 
-                </p>
-                <a href="{% url 'datasets' %}" class="button big">Upload now</a>
-            </div>
-        </div>
-        <div class="row-feature">
-            <div class="row-feature-icon">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/C%C3%B4te_d%27Ivoire_Map.jpg/602px-C%C3%B4te_d%27Ivoire_Map.jpg"/>
-            </div>
-            <div class="row-feature-content">
-                <h3>Digitize from map data</h3>
-                <p>
-                    If boundary data is not available, additional information can be sought from
-                    maps that depict country boundary outlines at a particular point in time. 
-                    Digitizing or extracting <b>map boundary outlines</b> helps to turn this information
-                    into useful boundary snapshots. 
-                </p>
-                <a href="{% url 'digitize_map' %}" class="button big">Digitize now</a>
-            </div>
-        </div>
-    </div>
-</section>
+<script>
+    /////////////
+    // main country map
+
+    // layer
+    var countryStyle = new ol.style.Style({
+        fill: new ol.style.Fill({
+            color: 'rgb(6,75,52)'
+        }),
+        stroke: new ol.style.Stroke({
+            color: 'white',
+            width: 0.5,
+        }),
+    });
+    var countryLayer = new ol.layer.Vector({
+        source: new ol.source.Vector(),
+        style: countryStyle,
+    });
+
+    // labelling
+    var countryLabelStyle = new ol.style.Style({
+        geometry: function(feature) {
+            // create a geometry that defines where the label will be display
+            var geom = feature.getGeometry();
+            if (geom.getType() == 'Polygon') {
+                // polygon
+                // place label at the bbox/center of the polygon
+                var extent = feature.getGeometry().getExtent();
+                var newGeom = ol.geom.Polygon.fromExtent(extent);
+            } else {
+                // multi polygon
+                // place label at the bbox/center of the largest polygon
+                var largestGeom = null;
+                var largestArea = null;
+                for (poly of geom.getPolygons()) {
+                    var extent = poly.getExtent();
+                    var extentGeom = ol.geom.Polygon.fromExtent(extent);
+                    var extentArea = extentGeom.getArea();
+                    if (extentArea > largestArea) {
+                        largestGeom = extentGeom;
+                        largestArea = extentArea;
+                    };
+                };
+                var newGeom = largestGeom;
+                
+            };
+            return newGeom;
+        },
+        text: new ol.style.Text({
+            //font: '12px Calibri,sans-serif',
+            fill: new ol.style.Fill({ color: '#000' }),
+            stroke: new ol.style.Stroke({
+                color: '#fff', width: 2
+            }),
+            overflow: true,
+        }),
+    });
+
+    // data
+    countryData = {{ countries_geojson|safe }};
+    if (countryData) {
+        feats = new ol.format.GeoJSON().readFeatures(countryData, {dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857'});
+        countryLayer.getSource().addFeatures(feats);
+    };
+
+    // map
+    var map = new ol.Map({
+        target: 'map',
+        controls: ol.control.defaults().extend([new ol.control.FullScreen(),
+                                                new ol.control.ScaleLine({units: 'metric'}),
+                                                ]),
+        layers: [
+        new ol.layer.Tile({
+            source: new ol.source.XYZ({
+                attributions: 'Satellite Imagery from Google',
+                url:
+                'http://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}',
+                maxZoom: 20,
+                crossOrigin: 'anonymous' // necessary for converting map to img during pdf generation: https://stackoverflow.com/questions/66671183/how-to-export-map-image-in-openlayer-6-without-cors-problems-tainted-canvas-iss
+            })}),
+            countryLayer
+        ],
+        view: new ol.View({
+            center: ol.proj.fromLonLat([0,0]),
+            zoom: 1
+        })
+    });
+
+    if (countryData) {
+        map.getView().fit(countryLayer.getSource().getExtent());
+    };
+
+    map.on('pointermove', function(evt) {
+        // get feat at pointer
+        let cursorFeat = null;
+        map.forEachFeatureAtPixel(evt.pixel, function(feature, layer) {
+            cursorFeat = feature;
+        });
+        // if any feat was found
+        if (cursorFeat != null) {
+            // clear any existing feature text
+            countryLayer.getSource().forEachFeature(function (feature) {
+                feature.setStyle(countryStyle);
+            });
+            // update the text style for the found feature
+            var label = cursorFeat.get('name');
+            var labelStyle = countryLabelStyle.clone();
+            labelStyle.getText().setText(label);
+            cursorFeat.setStyle([countryStyle,labelStyle]);
+        };
+    });
+
+</script>
+
 
 
 
