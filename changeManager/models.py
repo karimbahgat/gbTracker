@@ -16,7 +16,12 @@ class BoundarySource(models.Model):
     type = models.CharField(max_length=50,
                             choices=SOURCE_TYPES)
     name = models.CharField(max_length=200)
+    #created_by = ... # this should be a required User reference
+    #last_updated = models.DateTimeField(auto_now=True)
+    #validity_from = models.DateTime(null=True, blank=True)
+    #validity_to = models.DateTime(null=True, blank=True)
     citation = models.TextField(blank=True, null=True)
+    #lineage = models.TextField(blank=True, null=True)
     note = models.TextField(blank=True, null=True)
     url = models.URLField(blank=True, null=True)
 
@@ -26,6 +31,7 @@ class BoundaryReference(models.Model):
     source = models.ForeignKey('BoundarySource', related_name='boundary_refs', on_delete=models.PROTECT, 
                                 blank=True, null=True)
     names = models.ManyToManyField('BoundaryName', related_name='boundary_refs')
+    #level = models.IntegerField(null=True, blank=True) # just to indicate the self-described admin-level of the ref
 
     def get_all_parents(self, include_self=True):
         '''Returns a list of all parents, starting with and including self.'''
