@@ -162,9 +162,9 @@
         layers: [
         new ol.layer.Tile({
             source: new ol.source.XYZ({
-                attributions: 'Satellite Imagery <a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> ',
+                attributions: 'Satellite Imagery from Google',
                 url:
-                'https://api.maptiler.com/tiles/satellite/{z}/{x}/{y}.jpg?key=' + 'aknzJQRnZg32XVVPrcYH',
+                'http://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}',
                 maxZoom: 20,
                 crossOrigin: 'anonymous' // necessary for converting map to img during pdf generation: https://stackoverflow.com/questions/66671183/how-to-export-map-image-in-openlayer-6-without-cors-problems-tainted-canvas-iss
             })}),
