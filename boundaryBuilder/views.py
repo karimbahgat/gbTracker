@@ -13,6 +13,19 @@ from shapely.geometry import asShape
 
 # Create your views here.
 
+def track(request):
+    '''The main view that visually tracks and displays all data
+    related to a particular boundary definition and puts it on 
+    a timeline. 
+    The boundary definition is based on a search query, based on
+    a timestamp, and multiple hierarchical inputs, each allowing a 
+    name and code, and whether we want the current level or the 
+    level below.
+    '''
+    if request.method == 'GET':
+        context = {}
+        return render(request, 'track.html', context)
+
 def build(request):
     '''Builds and increment boundary changes one step at a time.
     

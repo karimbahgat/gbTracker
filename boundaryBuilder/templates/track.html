@@ -1,0 +1,156 @@
+{% extends "templates/base.html" %}
+
+{% load static %}
+
+{% block page_content %}
+
+<script src="{% static 'js/ol.js' %}"></script>
+<link rel="stylesheet" href="{% static 'css/ol.css' %}" type="text/css">
+
+<style>
+    #main-section {
+        display:flex;
+        flex-direction:row;
+        gap:10px;
+        width:100%;
+    }
+
+    #queries-div {
+        display: flex;
+        flex-direction: row;
+        gap: 10px;
+    }
+    
+    .query {
+        background-color: lightgray;
+        border-radius: 10px;
+        padding: 5px;
+    }
+
+    #map-div {
+        width:100%;
+    }
+    
+    #map {
+        width: 100%; 
+        height: 400px;
+    }
+    
+    #timeline-div {
+    }
+
+    .timeline-entry {
+        display: flex;
+        flex-direction: row;
+        gap: 20px;
+        width: 100%;
+    }
+
+    .timeline-entry-date {
+        display: flex;
+        width: 100px;
+        height: 100px;
+        background-color: lightgray;
+        border-radius: 50%;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .timeline-entry-content {
+        min-height: 100px;
+        flex-grow: 1;
+    }
+
+</style>
+
+<section>
+    <div class="content">
+        <header>
+            <div id="queries-div">
+                <h2>Tracking: </h2>
+                <h3 class="query">Libya</h3>
+            </div>
+        </header>
+
+        <div id="main-section">
+            <div id="map-div">
+                <div id="map"></div>
+            </div>
+        </div>
+    </div>
+
+    <br>
+
+    <h2>Timeline</h2>
+
+    <div id="timeline-div">
+        <div class="timeline-entry">
+            <h3 class="timeline-entry-date">
+                1980-01-01
+            </h3>
+            <div class="timeline-entry-content box">
+                fdslkjflj
+            </div>
+        </div>
+    </div>
+    
+</section>
+
+<script>
+    /////////////
+    // main map
+
+    // layer
+    var mainStyle = new ol.style.Style({
+        fill: new ol.style.Fill({
+            color: 'rgba(220, 220, 255, 0.5)'
+        }),
+        stroke: new ol.style.Stroke({
+            color: 'rgb(29,107,191)',
+            width: 2
+        }),
+    });
+    var mainLayer = new ol.layer.Vector({
+        source: new ol.source.Vector(),
+        style: mainStyle,
+    });
+
+    // data
+    mainGeojsonData = ''; //{{ main_geojson|safe }};
+    if (mainGeojsonData) {
+        feat = new ol.format.GeoJSON().readFeature(mainGeojsonData, {dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857'});
+        mainLayer.getSource().addFeature(feat);
+    };
+
+    // map
+    var map = new ol.Map({
+        target: 'map',
+        controls: ol.control.defaults().extend([new ol.control.FullScreen(),
+                                                new ol.control.ScaleLine({units: 'metric'}),
+                                                ]),
+        layers: [
+        new ol.layer.Tile({
+            source: new ol.source.XYZ({
+                attributions: 'Satellite Imagery from Google',
+                url:
+                'http://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}',
+                maxZoom: 20,
+                crossOrigin: 'anonymous' // necessary for converting map to img during pdf generation: https://stackoverflow.com/questions/66671183/how-to-export-map-image-in-openlayer-6-without-cors-problems-tainted-canvas-iss
+            })}),
+            mainLayer
+        ],
+        view: new ol.View({
+            center: ol.proj.fromLonLat([0,0]),
+            zoom: 1
+        })
+    });
+
+    if (mainGeojsonData) {
+        map.getView().fit(mainLayer.getSource().getExtent());
+    };
+
+
+</script>
+
+
+{% endblock %}

@@ -19,6 +19,7 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path('track', views.track, name='track'),
     path('build', views.build, name='build'),
     path('api_suggest_previous_changes', views.api_suggest_previous_changes, name='api_suggest_previous_changes'),
 ]
