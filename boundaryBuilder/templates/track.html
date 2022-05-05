@@ -25,6 +25,8 @@
         background-color: lightgray;
         border-radius: 10px;
         padding: 5px;
+        min-width: 40px;
+        text-align: center;
     }
 
     #map-div {
@@ -34,6 +36,15 @@
     #map {
         width: 100%; 
         height: 400px;
+    }
+
+    #sidepanel {
+        width:50%;
+        height:400px;
+    }
+    #info-div {
+        height:100%;
+        margin-bottom:5px;
     }
     
     #timeline-div {
@@ -68,7 +79,9 @@
         <header>
             <div id="queries-div">
                 <h2>Tracking: </h2>
-                <h3 class="query">Libya</h3>
+                {% for name in names %}
+                    <h3 class="query">{{ name }}</h3>
+                {% endfor %}
             </div>
         </header>
 
@@ -76,6 +89,17 @@
             <div id="map-div">
                 <div id="map"></div>
             </div>
+            <div id="sidepanel">
+                <div id="info-div" class="box">
+                    <ul>
+                        <li><h3>Time Period: ...</h3></li>
+                        <li><h3>Datasets: ...</h3></li>
+                        <li><h3>Maps: ...</h3></li>
+                        <li><h3>Texts: ...</h3></li>
+                    </ul>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -149,6 +173,47 @@
         map.getView().fit(mainLayer.getSource().getExtent());
     };
 
+</script>
+
+
+
+<script>
+    function getTrackData(names) {
+        url = "{% url 'api_track' %}" + '?names=' + names[0];
+        console.log(url);
+        fetch(url).then(resp=>resp.json()).then(data=>populateTrackData(data));
+    };
+
+    function populateTrackData(data) {
+        console.log(data);
+        div = document.getElementById('timeline-div');
+        div.innerHTML = '';
+        for (entry of data.entries) {
+            entryDiv = document.createElement('div');
+            entryDiv.className = "timeline-entry";
+            div.appendChild(entryDiv);
+
+            date = document.createElement('h3');
+            date.className = "timeline-entry-date";
+            date.innerText = 'xxxx-xx-xx';
+            entryDiv.appendChild(date);
+
+            content = document.createElement('div');
+            content.className = "timeline-entry-content box";
+            title = document.createElement('h4');
+            title.innerText = `Boundary Snapshot from ${entry.source} [${entry.type}]`;
+            content.appendChild(title);
+            details = document.createElement('span');
+            details.innerHTML = `${entry.snapshots.length} Boundaries`;
+            content.appendChild(details);
+            entryDiv.appendChild(content);
+        };
+    };
+
+    // get data on startup
+    nameList = {{ names|safe }};
+    console.log(nameList);
+    getTrackData(nameList);
 
 </script>
 

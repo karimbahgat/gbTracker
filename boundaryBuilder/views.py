@@ -23,8 +23,62 @@ def track(request):
     level below.
     '''
     if request.method == 'GET':
-        context = {}
+        context = {'names':request.GET['names'].split('|')}
         return render(request, 'track.html', context)
+
+def api_track(request):
+    '''Gets the data needed for the track page.
+    Groups and orders the data in json format.
+    Eg.: 
+    {dates:[
+        {date:1999, entries:[
+            {type:"change",
+            info:{}},
+            {type:"snapshot",
+            source:"source1",
+            source_type:"data",
+            snapshots:[snapid1,snapid2,snapid3]},
+            {type:"snapshot",
+            source:"source2",
+            source_type:"map",
+            snapshots:[snapid4,snapid5,snapid6]}
+        ]}
+    ]}
+    Or maybe not grouped by date, but rather a flat
+    list of entries where each has a date entry,
+    and then grouping is done dynamically on the 
+    frontend. 
+    '''
+    # quick hacky version
+    # only search for children of toplevel country given by name0
+    country = request.GET['names'].split('|')[0]
+    # org results
+    results = {'entries':[]}
+    # first change events
+    # refs = models.BoundaryReference.objects.filter(parent__names__name=country)
+    # for ref in refs:
+    #     entry = {'type':ref.source.type, 'source':ref.source.name}
+    #     # add info
+    #     # ...
+    #     results['entries'].append(entry)
+
+    # then snapshot sources
+    sources = models.BoundarySource.objects.filter(type__in=('DataSource','MapSource'), boundary_refs__parent__names__name=country, boundary_refs__snapshots__id__isnull=False).distinct()
+    for source in sources:
+        entry = {'type':source.type, 'source':source.name}
+        print(entry)
+
+        ids = models.BoundarySnapshot.objects.filter(boundary_ref__source__pk=source.pk, boundary_ref__parent__names__name=country).values_list('id')
+        ids = [id[0] for id in ids]
+        if not ids:
+            continue
+        print('ids',ids)
+        entry['snapshots'] = ids
+
+        results['entries'].append(entry)
+
+    return JsonResponse(results)
+
 
 def build(request):
     '''Builds and increment boundary changes one step at a time.
