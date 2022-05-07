@@ -217,6 +217,9 @@
 
             content = document.createElement('div');
             content.className = "timeline-entry-content box";
+            mapNum = 1;
+
+            // dataset boundary snapshots
             if (entry.type == 'DataSource') {
                 titleDiv = document.createElement('h4');
                 titleDiv.className = "row";
@@ -228,10 +231,19 @@
                 title.innerHTML = `Boundary Snapshot from ${entry.source}`;
                 titleDiv.appendChild(title);
                 content.appendChild(titleDiv);
+                mapDiv = document.createElement('div');
+                mapDiv.id = 'snapshot-map-' + mapNum;
+                mapDiv.style = 'width:100%; height:300px';
+                content.appendChild(mapDiv);
                 details = document.createElement('span');
                 details.innerHTML = `${entry.snapshots.length} Boundaries`;
                 content.appendChild(details);
                 entryDiv.appendChild(content);
+
+                // create and load snapshot map
+                createSnapshotMap(mapNum, entry.snapshots);
+
+                mapNum += 1;
             };
             
         };
@@ -241,6 +253,66 @@
         document.getElementById('dataset_count').innerText = data.datasets.length;
         document.getElementById('map_count').innerText = data.maps.length;
         document.getElementById('text_count').innerText = data.texts.length;
+    }
+
+    function createSnapshotMap(mapId, snapshotIds) {
+        let snapshotLayer = new ol.layer.Vector({
+            source: new ol.source.Vector(),
+            style: mainStyle,
+        });
+
+        // data
+        /*
+        mainGeojsonData = ''; //{{ main_geojson|safe }};
+        if (mainGeojsonData) {
+            feat = new ol.format.GeoJSON().readFeature(mainGeojsonData, {dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857'});
+            mainLayer.getSource().addFeature(feat);
+        };
+        */
+
+        // map
+        let map = new ol.Map({
+            target: 'snapshot-map-' + mapId,
+            controls: ol.control.defaults().extend([new ol.control.ScaleLine({units: 'metric'}),
+                                                    ]),
+            layers: [
+            new ol.layer.Tile({
+                source: new ol.source.XYZ({
+                    attributions: 'Satellite Imagery from Google',
+                    url:
+                    'http://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}',
+                    maxZoom: 20,
+                    crossOrigin: 'anonymous' // necessary for converting map to img during pdf generation: https://stackoverflow.com/questions/66671183/how-to-export-map-image-in-openlayer-6-without-cors-problems-tainted-canvas-iss
+                })}),
+                snapshotLayer
+            ],
+            view: new ol.View({
+                center: ol.proj.fromLonLat([0,0]),
+                zoom: 1
+            })
+        });
+
+        // add map data
+        function addLayerData(data) {
+            // TOFIX: have to extract all the geoms due to bad api results
+            feats = [];
+            for (item of data.results) {
+                snapshots = item.object.snapshots;
+                if (snapshots.length > 0) {
+                    geom = snapshots[0].geom;
+                    feat = {type:'Feature', properties:{}, geometry:geom}
+                    feats.push(feat);
+                };
+            };
+            coll = {type:'FeatureCollection', features:feats}
+            feats = new ol.format.GeoJSON().readFeatures(coll, {dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857'});
+            // add and zoom the data
+            snapshotLayer.getSource().addFeatures(feats);
+            map.getView().fit(snapshotLayer.getSource().getExtent());
+        };
+        let snapshotUrl = "{% url 'api_boundaries' %}?ids=" + snapshotIds.join(',');
+        fetch(snapshotUrl).then(resp=>resp.json()).then(data=>addLayerData(data));
+        
     }
 
     // get data on startup
