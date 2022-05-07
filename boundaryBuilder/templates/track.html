@@ -46,6 +46,18 @@
         height:100%;
         margin-bottom:5px;
     }
+
+    #info-div ul {
+        list-style-type: none;
+    }
+
+    #info-div ul li {
+        margin-top: 20px;
+    }
+
+    #info-div ul li img {
+        height: 25px;
+    }
     
     #timeline-div {
     }
@@ -92,10 +104,10 @@
             <div id="sidepanel">
                 <div id="info-div" class="box">
                     <ul>
-                        <li><h3>Time Period: ...</h3></li>
-                        <li><h3>Datasets: ...</h3></li>
-                        <li><h3>Maps: ...</h3></li>
-                        <li><h3>Texts: ...</h3></li>
+                        <li class="row"><img src="{% static 'images/time.svg' %}"><h3><span id="timeperiod">XXXX-XXXX</span></h3></li>
+                        <li class="row"><img src="{% static 'images/dataset.png' %}"><h3><span id="dataset_count">...</span> Datasets</h3></li>
+                        <li class="row"><img src="{% static 'images/map.png' %}"><h3><span id="map_count">...</span> Maps</h3></li>
+                        <li class="row"><img src="{% static 'images/text.png' %}"><h3 ><span id="text_count">...</span> Texts</h3></li>
                     </ul>
                 </div>
             </div>
@@ -110,10 +122,10 @@
     <div id="timeline-div">
         <div class="timeline-entry">
             <h3 class="timeline-entry-date">
-                1980-01-01
+                xxxx-xx-xx
             </h3>
             <div class="timeline-entry-content box">
-                fdslkjflj
+                ...
             </div>
         </div>
     </div>
@@ -181,7 +193,12 @@
     function getTrackData(names) {
         url = "{% url 'api_track' %}" + '?names=' + names[0];
         console.log(url);
-        fetch(url).then(resp=>resp.json()).then(data=>populateTrackData(data));
+        fetch(url).then(resp=>resp.json()).then(data=>trackDataLoaded(data));
+    };
+
+    function trackDataLoaded(data) {
+        populateTrackData(data);
+        populateTrackSources(data);
     };
 
     function populateTrackData(data) {
@@ -200,15 +217,31 @@
 
             content = document.createElement('div');
             content.className = "timeline-entry-content box";
-            title = document.createElement('h4');
-            title.innerText = `Boundary Snapshot from ${entry.source} [${entry.type}]`;
-            content.appendChild(title);
-            details = document.createElement('span');
-            details.innerHTML = `${entry.snapshots.length} Boundaries`;
-            content.appendChild(details);
-            entryDiv.appendChild(content);
+            if (entry.type == 'DataSource') {
+                titleDiv = document.createElement('h4');
+                titleDiv.className = "row";
+                icon = document.createElement('img');
+                icon.style = "height:20px"
+                icon.src = "{% static 'images/dataset.png' %}";
+                titleDiv.appendChild(icon);
+                title = document.createElement('h4');
+                title.innerHTML = `Boundary Snapshot from ${entry.source}`;
+                titleDiv.appendChild(title);
+                content.appendChild(titleDiv);
+                details = document.createElement('span');
+                details.innerHTML = `${entry.snapshots.length} Boundaries`;
+                content.appendChild(details);
+                entryDiv.appendChild(content);
+            };
+            
         };
     };
+
+    function populateTrackSources(data) {
+        document.getElementById('dataset_count').innerText = data.datasets.length;
+        document.getElementById('map_count').innerText = data.maps.length;
+        document.getElementById('text_count').innerText = data.texts.length;
+    }
 
     // get data on startup
     nameList = {{ names|safe }};

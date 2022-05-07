@@ -52,8 +52,10 @@ def api_track(request):
     # quick hacky version
     # only search for children of toplevel country given by name0
     country = request.GET['names'].split('|')[0]
+
     # org results
     results = {'entries':[]}
+
     # first change events
     # refs = models.BoundaryReference.objects.filter(parent__names__name=country)
     # for ref in refs:
@@ -76,6 +78,12 @@ def api_track(request):
         entry['snapshots'] = ids
 
         results['entries'].append(entry)
+
+    # source types
+    sources = models.BoundarySource.objects.filter(boundary_refs__parent__names__name=country).distinct()
+    results['datasets'] = [model_to_dict(obj) for obj in sources.filter(type='DataSource')]
+    results['maps'] = [model_to_dict(obj) for obj in sources.filter(type='MapSource')]
+    results['texts'] = [model_to_dict(obj) for obj in sources.filter(type='TextSource')]
 
     return JsonResponse(results)
 
