@@ -256,19 +256,11 @@
     }
 
     function createSnapshotMap(mapId, snapshotIds) {
+        // layer
         let snapshotLayer = new ol.layer.Vector({
             source: new ol.source.Vector(),
             style: mainStyle,
         });
-
-        // data
-        /*
-        mainGeojsonData = ''; //{{ main_geojson|safe }};
-        if (mainGeojsonData) {
-            feat = new ol.format.GeoJSON().readFeature(mainGeojsonData, {dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857'});
-            mainLayer.getSource().addFeature(feat);
-        };
-        */
 
         // map
         let map = new ol.Map({

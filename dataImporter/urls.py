@@ -20,5 +20,5 @@ from . import views
 
 urlpatterns = [
     path('datasets', views.datasets, name='datasets'),
-    path('import_shapefile', views.import_from_shapefile, name='import_shapefile'),
+    path('datasource/import/<int:pk>/', views.datasource_import, name='datasource_import'),
 ]

@@ -20,6 +20,7 @@ from . import views
 
 urlpatterns = [
     path('source/<int:pk>/', views.source, name='source'),
+    path('datasource/add/', views.datasource_add, name='datasource_add'),
     #path('snapshots/<int:pk>/', views.snapshot, name='snapshot'),
     path('boundaries/<int:pk>/', views.boundary, name='boundary'),
     path('api/boundaries/<int:pk>/', views.api_boundary, name='api_boundary'),

@@ -1,10 +1,12 @@
 from django.http.response import HttpResponse
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.forms.models import fields_for_model, model_to_dict
 from django.views.decorators.csrf import csrf_exempt
+from django.db import transaction
 
 from . import models
+from . import forms
 
 import json
 
@@ -15,12 +17,37 @@ def source(request, pk):
     src = models.BoundarySource.objects.get(pk=pk)
     toplevel_refs = src.boundary_refs.filter(parent=None)
     context = {'source':src, 'toplevel_refs':toplevel_refs}
+    print('typ',src,repr(src.type))
     if src.type == 'TextSource':
         raise NotImplementedError()
     elif src.type == 'DataSource':
         return render(request, 'source_data.html', context)
     elif src.type == 'MapSource':
         return render(request, 'source_map.html', context)
+
+def datasource_add(request):
+    if request.method == 'GET':
+        # create empty form
+        form = forms.BoundarySourceForm(initial={'type':'DataSource'})
+        context = {'form': form}
+        return render(request, 'source_data_add.html', context)
+
+    elif request.method == 'POST':
+        with transaction.atomic():
+            # save form data
+            data = request.POST
+            form = forms.BoundarySourceForm(data)
+            if form.is_valid():
+                form.save()
+                source = form.instance
+                # save importer
+                from dataImporter.models import DataImporter
+                import_params = json.loads(data['import_params'])
+                importer = DataImporter(source=source, import_params=import_params)
+                importer.save()
+                return redirect('source', source.pk)
+            else:
+                return render(request, 'source_data_add.html', {'form':form})
 
 def boundary(request, pk):
     '''View of a boundary ref instance.'''
