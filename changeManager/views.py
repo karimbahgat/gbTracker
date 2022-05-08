@@ -192,6 +192,20 @@ def _parse_date(dateval):
             raise Exception('"{}" is not a valid date'.format(dateval))
         return start,end
 
+def api_snapshots(request):
+    if request.method == 'GET':
+        ids = request.GET['ids']
+        ids = ids.split(',')
+        ids = list(map(int, ids))
+        snaps = models.BoundarySnapshot.objects.filter(pk__in=ids)
+        feats = []
+        for snap in snaps:
+            geom = snap.geom.__geo_interface__
+            feat = {'type': 'Feature', 'properties': {}, 'geometry':geom}
+            feats.append(feat)
+        coll = {'type': 'FeatureCollection', 'features': feats}
+        return JsonResponse(coll)
+
 @csrf_exempt
 def api_boundary(request, pk):
     if request.method == 'GET':

@@ -205,6 +205,7 @@
         console.log(data);
         div = document.getElementById('timeline-div');
         div.innerHTML = '';
+        mapNum = 1;
         for (entry of data.entries) {
             entryDiv = document.createElement('div');
             entryDiv.className = "timeline-entry";
@@ -212,12 +213,13 @@
 
             date = document.createElement('h3');
             date.className = "timeline-entry-date";
-            date.innerText = 'xxxx-xx-xx';
+            valid_from = entry.valid_from.slice(0, 4);
+            valid_to = entry.valid_to.slice(0, 4);
+            date.innerText = `${valid_from} - ${valid_to}`;
             entryDiv.appendChild(date);
 
             content = document.createElement('div');
             content.className = "timeline-entry-content box";
-            mapNum = 1;
 
             // dataset boundary snapshots
             if (entry.type == 'DataSource') {
@@ -228,7 +230,8 @@
                 icon.src = "{% static 'images/dataset.png' %}";
                 titleDiv.appendChild(icon);
                 title = document.createElement('h4');
-                title.innerHTML = `Boundary Snapshot from ${entry.source}`;
+                sourceLink = `<a target="_blank" href="/source/${entry.source_id}">${entry.source}</a>`;
+                title.innerHTML = `Boundary Snapshot from ${sourceLink}`;
                 titleDiv.appendChild(title);
                 content.appendChild(titleDiv);
                 mapDiv = document.createElement('div');
@@ -250,6 +253,17 @@
     };
 
     function populateTrackSources(data) {
+        valid_froms = [];
+        valid_tos = [];
+        for (entry of data.entries) {
+            valid_froms.push(entry.valid_from);
+            valid_tos.push(entry.valid_to);
+        };
+        valid_froms.sort();
+        valid_from = valid_froms[0].slice(0, 4);
+        valid_tos.sort();
+        valid_to = valid_tos[valid_tos.length-1].slice(0, 4);
+        document.getElementById('timeperiod').innerText = `${valid_from} - ${valid_to}`;
         document.getElementById('dataset_count').innerText = data.datasets.length;
         document.getElementById('map_count').innerText = data.maps.length;
         document.getElementById('text_count').innerText = data.texts.length;
@@ -286,23 +300,12 @@
 
         // add map data
         function addLayerData(data) {
-            // TOFIX: have to extract all the geoms due to bad api results
-            feats = [];
-            for (item of data.results) {
-                snapshots = item.object.snapshots;
-                if (snapshots.length > 0) {
-                    geom = snapshots[0].geom;
-                    feat = {type:'Feature', properties:{}, geometry:geom}
-                    feats.push(feat);
-                };
-            };
-            coll = {type:'FeatureCollection', features:feats}
-            feats = new ol.format.GeoJSON().readFeatures(coll, {dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857'});
+            feats = new ol.format.GeoJSON().readFeatures(data, {dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857'});
             // add and zoom the data
             snapshotLayer.getSource().addFeatures(feats);
             map.getView().fit(snapshotLayer.getSource().getExtent());
         };
-        let snapshotUrl = "{% url 'api_boundaries' %}?ids=" + snapshotIds.join(',');
+        let snapshotUrl = "{% url 'api_snapshots' %}?ids=" + snapshotIds.join(',');
         fetch(snapshotUrl).then(resp=>resp.json()).then(data=>addLayerData(data));
         
     }

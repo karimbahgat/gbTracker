@@ -25,4 +25,5 @@ urlpatterns = [
     path('boundaries/<int:pk>/', views.boundary, name='boundary'),
     path('api/boundaries/<int:pk>/', views.api_boundary, name='api_boundary'),
     path('api/boundaries', views.api_boundaries, name='api_boundaries'),
+    path('api/snapshots/', views.api_snapshots, name='api_snapshots'),
 ]

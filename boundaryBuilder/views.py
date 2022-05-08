@@ -3,6 +3,7 @@ from django.urls import reverse
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.forms.models import model_to_dict
+from django.db.models import Min, Max
 
 from changeManager import models
 
@@ -67,17 +68,25 @@ def api_track(request):
     # then snapshot sources
     sources = models.BoundarySource.objects.filter(type__in=('DataSource','MapSource'), boundary_refs__parent__names__name=country, boundary_refs__snapshots__id__isnull=False).distinct()
     for source in sources:
-        entry = {'type':source.type, 'source':source.name}
-        print(entry)
+        entry = {'type':source.type, 'source':source.name, 'source_id':source.pk}
 
-        ids = models.BoundarySnapshot.objects.filter(boundary_ref__source__pk=source.pk, boundary_ref__parent__names__name=country).values_list('id')
+        snaps = models.BoundarySnapshot.objects.filter(boundary_ref__source__pk=source.pk, boundary_ref__parent__names__name=country)
+        agg = snaps.aggregate(Min('event__date_start'), Max('event__date_end'))
+        entry['valid_from'] = agg['event__date_start__min']
+        entry['valid_to'] = agg['event__date_end__max']
+
+        ids = snaps.values_list('id')
         ids = [id[0] for id in ids]
         if not ids:
             continue
-        print('ids',ids)
         entry['snapshots'] = ids
-
+        
+        print(entry)
         results['entries'].append(entry)
+
+    # sort all results
+    sort_by = lambda entry: entry['valid_from']
+    results['entries'] = sorted(results['entries'], key=sort_by, reverse=True)
 
     # source types
     sources = models.BoundarySource.objects.filter(boundary_refs__parent__names__name=country).distinct()
