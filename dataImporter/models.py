@@ -7,6 +7,7 @@ from changeManager.models import BoundarySource
 class DataImporter(models.Model):
     source = models.OneToOneField(BoundarySource, related_name='importer', on_delete=models.PROTECT)
     import_params = models.JSONField(blank=True, null=True)
+    last_imported = models.DateTimeField(null=True, blank=True)
 
 # class DataImporter(models.Model):
 #     source = models.OneToOneField('BoundarySource', related_name='importer')

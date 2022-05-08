@@ -2,6 +2,7 @@ import enum
 from django.shortcuts import render, redirect
 from django.db import transaction
 from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
 
 import os
 import csv
@@ -42,7 +43,7 @@ def datasource_import(request, pk):
         print('POST', request.POST)
 
         # load import params
-        params = source.importer.import_params
+        params = source.importer.import_params.copy()
         print('params', params)
 
         # # load country data
@@ -78,6 +79,9 @@ def datasource_import(request, pk):
 
         # add to db inside transaction
         with transaction.atomic():
+            # drop any existing data (refs incl cascading snapshots)
+            source.boundary_refs.all().delete()
+
             # parse date
             def parse_date(dateval):
                 '''Can be a year, year-month, or year-month-day'''
@@ -149,6 +153,10 @@ def datasource_import(request, pk):
                 print('adding to db')
                 common = {'event':event, 'source':source}
                 add_to_db(reader, common, data)
+            # update last imported
+            importer = source.importer
+            importer.last_imported = timezone.now()
+            importer.save()
 
         # delete tempfiles
         for temp in temps:

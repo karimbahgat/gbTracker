@@ -230,7 +230,7 @@
                 icon.src = "{% static 'images/dataset.png' %}";
                 titleDiv.appendChild(icon);
                 title = document.createElement('h4');
-                sourceLink = `<a target="_blank" href="/source/${entry.source_id}">${entry.source}</a>`;
+                sourceLink = `<a href="/source/${entry.source_id}">${entry.source}</a>`;
                 title.innerHTML = `Boundary Snapshot from ${sourceLink}`;
                 titleDiv.appendChild(title);
                 content.appendChild(titleDiv);

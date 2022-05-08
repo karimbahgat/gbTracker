@@ -17,11 +17,19 @@ def source(request, pk):
     src = models.BoundarySource.objects.get(pk=pk)
     toplevel_refs = src.boundary_refs.filter(parent=None)
     context = {'source':src, 'toplevel_refs':toplevel_refs}
+
     print('typ',src,repr(src.type))
+    
     if src.type == 'TextSource':
         raise NotImplementedError()
+        
     elif src.type == 'DataSource':
+        import_params = src.importer.import_params
+        try: import_params = json.dumps(import_params, indent=4)
+        except: pass
+        context['import_params'] = import_params
         return render(request, 'source_data.html', context)
+        
     elif src.type == 'MapSource':
         return render(request, 'source_map.html', context)
 
@@ -48,6 +56,34 @@ def datasource_add(request):
                 return redirect('source', source.pk)
             else:
                 return render(request, 'source_data_add.html', {'form':form})
+
+def datasource_edit(request, pk):
+    '''Edit of a source'''
+    src = models.BoundarySource.objects.get(pk=pk)
+
+    if request.method == 'GET':
+        # create empty form
+        form = forms.BoundarySourceForm(instance=src)
+        import_params = src.importer.import_params
+        try: import_params = json.dumps(import_params, indent=4)
+        except: pass
+        context = {'form': form, 'import_params': import_params}
+        return render(request, 'source_data_edit.html', context)
+
+    elif request.method == 'POST':
+        with transaction.atomic():
+            # save form data
+            data = request.POST
+            form = forms.BoundarySourceForm(data, instance=src)
+            if form.is_valid():
+                form.save()
+                # save importer
+                importer = src.importer
+                importer.import_params = json.loads(data['import_params'])
+                importer.save()
+                return redirect('source', src.pk)
+            else:
+                return render(request, 'source_data_edit.html', {'form':form})
 
 def boundary(request, pk):
     '''View of a boundary ref instance.'''

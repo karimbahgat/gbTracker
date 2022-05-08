@@ -26,9 +26,9 @@ class BoundarySource(models.Model):
     url = models.URLField(blank=True, null=True)
 
 class BoundaryReference(models.Model):
-    parent = models.ForeignKey('BoundaryReference', related_name='children', on_delete=models.PROTECT, 
+    parent = models.ForeignKey('BoundaryReference', related_name='children', on_delete=models.CASCADE, 
                                 blank=True, null=True)
-    source = models.ForeignKey('BoundarySource', related_name='boundary_refs', on_delete=models.PROTECT, 
+    source = models.ForeignKey('BoundarySource', related_name='boundary_refs', on_delete=models.CASCADE, 
                                 blank=True, null=True)
     names = models.ManyToManyField('BoundaryName', related_name='boundary_refs')
     codes = models.ManyToManyField('BoundaryCode', related_name='boundary_refs')

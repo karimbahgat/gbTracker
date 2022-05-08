@@ -10,6 +10,7 @@
 <section>
     <div class="content">
         <header>
+            <a class="button" style="float:right" href="{% url 'datasource_edit' source.pk %}">Edit</a>
             <h2 style="text-align:left">
                 Source: &nbsp;&nbsp;{{ source.name }}
             </h2>
@@ -35,8 +36,21 @@
                 <span style="vertical-align:top">Source Note: 
                 {{ source.note }}
                 </span>
+
+                <br>
+
+                <span style="vertical-align:top">Import Parameters: 
+                <textarea style="margin:10px 0px" cols="40" rows="10" disabled>{{ import_params }}</textarea>
+                </span>
+
+                <a class="button" style="float:right" href="{% url 'datasource_import' source.pk %}">Import Data</a>
+                <span style="vertical-align:top">Last Imported: 
+                {{ source.importer.last_imported }}
+                </span>
             </p>
         </header>
+
+        <br><br>
 
         <div>
 
