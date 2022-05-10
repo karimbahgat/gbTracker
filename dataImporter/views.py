@@ -18,9 +18,13 @@ def datasets(request):
     context = {'sources':sources}
     return render(request, 'datasets.html', context)
 
-#def _import_data(parent, features):
-#    '''Create snapshots for all features belonging to a particular parent'''
-#    fdsfsdf
+def datasource_import_all(request):
+    '''Not meant for users, only for internal use to quickly load
+    large amounts of data'''
+    sources = models.BoundarySource.objects.all()
+    for src in sources:
+        print('importing from', src)
+        datasource_import(request, src.pk)
 
 @csrf_exempt
 def datasource_import(request, pk):
@@ -209,7 +213,7 @@ def parse_data(**params):
         data = []
         level_def = level_defs[level]
         group_field = level_def['id_field'] if level > 0 else None # id not required for adm0
-        fields = [v for k,v in level_def.items() if k.endswith('_field')]
+        fields = [v for k,v in level_def.items() if k.endswith('_field') and v != None]
         for groupval,_subset in iter_shapefile_groups(reader, group_field, subset):
             # override all level 0 with a single iso country lookup
             #if level == 0 and iso:
@@ -218,7 +222,7 @@ def parse_data(**params):
             item = {'id':groupval, 'level':level, 
                     'positions':_subset}
             rec = reader.record(_subset[0], fields=fields)
-            item['name'] = level_def['name'] if 'name' in level_def else rec[level_def['name_field']]
+            item['name'] = level_def['name'] if level_def.get('name', None) else rec[level_def['name_field']]
             # next
             if level_def != level_defs[-1]:
                 # recurse into next group_field

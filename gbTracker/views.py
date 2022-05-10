@@ -14,12 +14,12 @@ def home(request):
         for ref in toprefs:
             name = ref.names.first().name
             countries.add(name)
-            snap = ref.snapshots.first()
-            if snap:
-                geom = snap.geom.__geo_interface__
-                props = {'name':name}
-                feat = {'type':'Feature', 'geometry':geom, 'properties':props}
-                countries_geoj['features'].append(feat)
+            #snap = ref.snapshots.first()
+            #if snap:
+            #    geom = snap.geom.__geo_interface__
+            #    props = {'name':name}
+            #    feat = {'type':'Feature', 'geometry':geom, 'properties':props}
+            #    countries_geoj['features'].append(feat)
         countries = sorted(countries)
         countries_geoj = json.dumps(countries_geoj)
     else:
