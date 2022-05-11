@@ -1,0 +1,62 @@
+{% extends "templates/base.html" %}
+
+{% load static %}
+
+{% block page_content %}
+
+<script src="{% static 'js/ol.js' %}"></script>
+<link rel="stylesheet" href="{% static 'css/ol.css' %}" type="text/css">
+
+<style>
+    #img-preview {
+        width: 100%;
+        min-height: 400px;
+    }
+</style>
+
+<section>
+    <div class="content">
+        <header>
+            <a class="button" style="float:right" href="{% url 'mapsource_edit' source.pk %}">Edit</a>
+            <h2 style="text-align:left">
+                Source: &nbsp;&nbsp;{{ source.name }}
+            </h2>
+            <p>
+                <span style="vertical-align:top">Type: 
+                Map <img height="20px" style="display:none" src="{% static 'changeManager/images/map.png' %}">
+                </span>
+
+                <br>
+
+                <span style="vertical-align:top">URL: 
+                <a href="{{ source.url }}">{{ source.url }}</a>
+                </span>
+
+                <br>
+            
+                <span style="vertical-align:top">Citation: 
+                {{ source.citation }}
+                </span>
+
+                <br>
+            
+                <span style="vertical-align:top">Source Note: 
+                {{ source.note }}
+                </span>
+
+                <br>
+
+                
+            </p>
+        </header>
+
+        <br><br>
+
+        <div>
+            <img id="img-preview" src="{{ source.url }}">
+        </div>
+
+    </div>
+</section>
+
+{% endblock %}

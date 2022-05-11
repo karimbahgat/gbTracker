@@ -1,0 +1,59 @@
+{% extends "templates/base.html" %}
+
+{% load static %}
+
+{% block page_content %}
+
+<style>
+    #img-preview {
+        width: 100%;
+        min-height: 400px;
+    }
+</style>
+
+<section>
+    <div class="content">
+        <header>
+            <div class="row">
+                <img height="30px" src="{% static 'images/map.png' %}">
+                <h2 style="text-align:left">
+                    Add a Map Source
+                </h2>
+            </div>
+            <p>
+                Some instructions here... 
+            </p>
+        </header>
+
+        <div>
+            <form method="POST" action="{% url 'mapsource_add' %}">
+                {% csrf_token %}
+                <table>
+                    {{ form.as_table }}
+                    <tr>
+                        <th>Preview:</th>
+                        <td><img id="img-preview"></td>
+                    </tr>
+                </table>
+                <button style="float:right" type="submit">Submit</button>
+            </form>
+        </div>
+
+        <br><br>
+
+    </div>
+</section>
+
+<script>
+    function previewImage() {
+        url = document.getElementById('id_url').value;
+        if (url.endsWith('.jpg') | url.endsWith('.png')) {
+            img = document.getElementById('img-preview');
+            img.src = url;
+        };
+    };
+    urlInput = document.getElementById('id_url');
+    urlInput.addEventListener('input', previewImage, true);
+</script>
+
+{% endblock %}
