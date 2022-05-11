@@ -4,9 +4,6 @@
 
 {% block page_content %}
 
-<script src="{% static 'js/ol.js' %}"></script>
-<link rel="stylesheet" href="{% static 'css/ol.css' %}" type="text/css">
-
 <style>
     #img-preview {
         width: 100%;
@@ -46,14 +43,12 @@
 
                 <br>
 
-                
+                <span>Digitize boundary outlines from the map:</span>
             </p>
         </header>
 
-        <br><br>
-
         <div>
-            <img id="img-preview" src="{{ source.url }}">
+            {% include "digitize_map.html" %}
         </div>
 
     </div>

@@ -1,11 +1,13 @@
-{% extends "templates/base.html" %}
-
 {% load static %}
 
-{% block page_content %}
+{% block map_digitizer %}
 
 <script src="{% static 'js/ol.js' %}"></script>
 <link rel="stylesheet" href="{% static 'css/ol.css' %}" type="text/css">
+
+<script src="{% static 'js/jquery.min.js' %}"></script>
+<script src="{% static 'js/jquery.easytabs.js' %}" type="text/javascript"></script>
+<!--<script type="text/javascript" src="http://code.jquery.com/jquery-migrate-1.2.1.min.js"></script>-->
 
 <!-- style -->
 <style>
@@ -18,7 +20,7 @@
         width: 100%; 
         height: 400px;
     }
-    #tools {
+    #tab-container {
         width: 60%;
         height: 400px;
     }
@@ -27,31 +29,35 @@
 <!-- Form -->
 <section>
     <div class="content">
-        <header>
-            <h1>Map Digitizer</h1>
-            <p>Digitize boundary outlines from a map.</p>
-        </header>
         <div>
-            <div id="map-input">
-                <input type="url" placeholder="URL to map image" value="{{ source }}" oninput="setImageSource(this.value)">
-            </div>
-            <br>
             <div id="map-and-tools">
+
                 <div id="map">
                 </div>
-                <div id="tools" class="box">
-                    <button style="float:right" class="small">Save</button>
-                    <button style="float:right" class="small" onclick="addNewBoundary()">Add new</button>
-                    <h3>Boundaries</h3>
-                    <table id="boundary-table">
-                        <thead>
-                            <th>Name</th>
-                            <th></th>
-                        </thead>
-                        <tbody>
-                        </tbody>
-                    </table>
+
+                <div id="tab-container" class="tab-container">
+                    <ul class='etabs'>
+                        <li class='tab'><a href="#masking">Mask</a></li>
+                        <li class='tab'><a href="#splitlines">Lines</a></li>
+                        <li class='tab'><a href="#labelling">Labels</a></li>
+                        <li class='tab'><a href="#coastlines">Coastlines</a></li>
+                    </ul>
+
+                    <div id="splitlines" class="box">
+                        <button style="float:right" class="small">Save</button>
+                        <button style="float:right" class="small" onclick="addNewBoundary()">Add new</button>
+                        <h3>Splitlines</h3>
+                        <table id="boundary-table">
+                            <thead>
+                                <th>Name</th>
+                                <th></th>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
+
             </div>
         </div>
     </div>
@@ -60,6 +66,8 @@
 <!-- Some dynamic javascript functionality -->
 
 <script>
+	$(document).ready(function () { $('#tab-container').easytabs({animate:false}); });
+
     // https://stackoverflow.com/questions/63086424/openlayers-dynamic-image-sizes
 
     // image pixel projection
@@ -95,8 +103,8 @@
         // begin loading image
         img.src = url;
     };
-    testUrl = "https://www.worldatlas.com/upload/25/30/5f/regions-of-burkina-faso-map.png";
-    setImageSource(testUrl);
+    url = "{{ source.url }}";
+    setImageSource(url);
 
     // digitizing layer
     var boundaryLayer = new ol.layer.Vector({
