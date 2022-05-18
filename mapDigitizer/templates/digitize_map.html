@@ -82,7 +82,7 @@
             <br><br>
 
         </div>
-        
+
     </div>
 </section>
 
@@ -214,23 +214,34 @@
 
     let draw; // global so we can remove it later
     let modify;
+    let snap;
     
     function enableDrawInteraction(lyr) {
+        try {map.removeInteraction(snap)} catch {};
         try {map.removeInteraction(draw)} catch {};
         draw = new ol.interaction.Draw({
             source: lyr.getSource(),
             type: 'MultiLineString',
         });
         map.addInteraction(draw);
+        snap = new ol.interaction.Snap({
+            source: lyr.getSource()
+        });
+        map.addInteraction(snap);
     };
 
     function enableEditInteraction(lyr) {
+        try {map.removeInteraction(snap)} catch {};
         try {map.removeInteraction(draw)} catch {};
         try {map.removeInteraction(modify)} catch {};
         modify = new ol.interaction.Modify({
             source: lyr.getSource()
         });
         map.addInteraction(modify);
+        snap = new ol.interaction.Snap({
+            source: lyr.getSource()
+        });
+        map.addInteraction(snap);
     };
 
     function addNewLevel() {
