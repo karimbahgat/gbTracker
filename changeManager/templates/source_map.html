@@ -43,7 +43,13 @@
 
                 <br>
 
-                <span>Digitize boundary outlines from the map:</span>
+                <span>Digitized: 
+                {% if source.digitizer and source.digitizer.last_digitized %}
+                    {{ source.digitizer.last_digitized }}
+                {% else %}
+                    Never
+                {% endif %}
+                </span>
             </p>
         </header>
 

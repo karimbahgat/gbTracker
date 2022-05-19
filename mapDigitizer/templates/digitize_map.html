@@ -53,7 +53,7 @@
                     <div id="digitize-tab" class="box">
 
                         <div style="width:100%; text-align:right">
-                            <span><button class="small">Save</button></span>
+                            <span><button type="button" class="small" onclick="submitDigitizedData()">Save</button></span>
                         </div>
 
                         <h3>Border Lines</h3>
@@ -69,6 +69,12 @@
                         <div style="width:100%; text-align:center">
                             <span><button class="small" onclick="addNewLevel()">Add level</button></span>
                         </div>
+
+                        <form id="digitize-form" method="POST" action="{% url 'digitize_map' source.pk %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="data" value="{}">
+                        </form>
+
 
                     </div>
 
@@ -288,7 +294,71 @@
         enableEditInteraction(lyr);
     };
 
-    addNewLevel();
+    // digitizing, data loading, and submission
+
+    function loadDigitizedData(lvl) {
+        reader = new ol.format.GeoJSON({});
+        coll = data['ADM'+lvl];
+        lyr = borderLayers[lvl];
+        feats = [];
+        for (geom of coll['geometries']) {
+            feat = {type:'Feature', geometry:geom}
+            feat = reader.readFeature(feat);
+            feats.push(feat);
+            feat.setId(feats.length);
+        };
+        lyr.getSource().addFeatures(feats);
+    };
+
+    function getLayerAsCollection(lyr) {
+        writer = new ol.format.GeoJSON({});
+        console.log(writer)
+        feats = lyr.getSource().getFeatures();
+        console.log(feats)
+        geomDicts = [];
+        for (feat of feats) {
+            geomDict = writer.writeGeometryObject(feat.getGeometry());
+            geomDicts.push(geomDict);
+        };
+        coll = {type:'GeometryCollection', geometries:geomDicts}
+        return coll;
+    };
+
+    function submitDigitizedData() {
+        lvl = document.querySelectorAll('#border-levels-table tbody tr').length;
+        data = {};
+        for (i=0; i<lvl; i++) {
+            lyr = borderLayers[i];
+            coll = getLayerAsCollection(lyr);
+            data['ADM'+i] = coll;
+        };
+        // write as json string to the data input
+        form = document.getElementById("digitize-form");
+        form.querySelector("input[name='data']").value = JSON.stringify(data);
+        // submit the form
+        form.submit();
+    };
+
+    // data init
+    dataString = '{{ source.digitizer.digitized_data_json|safe }}';
+    if (dataString) {
+        data = JSON.parse(dataString);
+    } else {
+        data = null;
+    };
+
+    if (data) {
+        levels = Object.keys(data);
+        levels.sort();
+        for (lvl of levels) {
+            addNewLevel();
+            loadDigitizedData(lvl);
+        };
+
+    } else {
+        // no data, just add the first adm0 level
+        addNewLevel();
+    };
 
 </script>
 
