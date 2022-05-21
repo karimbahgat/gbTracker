@@ -30,3 +30,18 @@ def digitize_map(request, pk):
             digitizer.build()
 
         return redirect('source', source.pk)
+
+def label_map(request, pk):
+    source = BoundarySource.objects.get(pk=pk)
+
+    if request.method == 'POST':
+        # receive and save digitized map data
+        with transaction.atomic():
+            # load labelling data
+            data = request.POST['data']
+            data = json.loads(data)
+            # update snapshot labels
+            digitizer = MapDigitizer.objects.get(source=source)
+            digitizer.update_names(data)
+
+        return redirect('source', source.pk)

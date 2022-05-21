@@ -2,7 +2,7 @@ from itertools import combinations
 from re import L
 from django.db import models, transaction
 
-from changeManager.models import BoundaryReference, BoundarySnapshot, Event
+from changeManager.models import BoundaryReference, BoundarySnapshot, BoundaryName, Event
 
 import json
 
@@ -201,3 +201,15 @@ class MapDigitizer(models.Model):
             # level_colls[lvl] = coll
 
         return level_colls
+
+    def update_names(self, data):
+        with transaction.atomic():
+            for pk,names in data.items():
+                ref = BoundaryReference.objects.get(pk=pk)
+                # clear old names
+                ref.names.clear()
+                # add new names
+                for name in names:
+                    name,created = BoundaryName.objects.get_or_create(name=name)
+                    ref.names.add(name)
+

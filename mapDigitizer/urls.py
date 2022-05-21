@@ -20,4 +20,5 @@ from . import views
 
 urlpatterns = [
     path('digitize_map/<int:pk>/', views.digitize_map, name='digitize_map'),
+    path('label_map/<int:pk>/', views.label_map, name='label_map'),
 ]

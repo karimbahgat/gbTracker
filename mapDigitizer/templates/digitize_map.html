@@ -87,7 +87,7 @@
                     <div id="names-tab" class="box">
 
                         <div style="width:100%; text-align:right">
-                            <span><button type="button" class="small" onclick="">Save</button></span>
+                            <span><button type="button" class="small" onclick="submitNamesData()">Save</button></span>
                         </div>
 
                         <div id="namelevels-tab-container" class="tab-container">
@@ -100,7 +100,7 @@
 
                             {% for lvl in levels %}
                                 <div id="namelevels-tab-{{ lvl }}" class="box">
-                                    <h3>Boundary Names</h3>
+                                    <h3>ADM{{ lvl }} Names</h3>
                                     <div style="height:190px; overflow:auto">
                                         <table>
                                             <thead>
@@ -115,6 +115,11 @@
                             {% endfor %}
                             
                         </div>
+
+                        <form id="names-form" method="POST" action="{% url 'label_map' source.pk %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="data" value="{}">
+                        </form>
 
                     </div>
 
@@ -254,7 +259,7 @@
         style: function (feature) {
             let style = namesStyle.clone();
             // set name label
-            let name = feature.get('name');
+            let name = feature.get('boundary_refs')[0]['names'][0]; // ignore alt names
             style.getText().setText(name);
             // set feature color
             if (name) {
@@ -418,6 +423,24 @@
         namesLayer.getSource().addFeatures(feats);
     };
 
+    function submitNamesData() {
+        let data = {};
+        namesLayer.getSource().forEachFeature(
+            function (feat) {
+                // Get the feature's db pk, which is different from .getId()
+                let pk = feat.get('id');
+                // Set the name of each pk
+                let names = feat.get('boundary_refs')[0]['names'];
+                data[pk] = names;
+            }
+        );
+        // set form data
+        form = document.getElementById("names-form");
+        form.querySelector("input[name='data']").value = JSON.stringify(data);
+        // submit form
+        form.submit();
+    };
+
     function populateNamesTables(namesData) {
         let i = 1;
         for (feat of namesData) {
@@ -439,7 +462,7 @@
             td = document.createElement('td');
             let nameInput = document.createElement('input');
             nameInput.type = 'text';
-            nameInput.innerText = feat['properties']['boundary_refs'][0]['names'];
+            nameInput.value = feat['properties']['boundary_refs'][0]['names'][0]; // ignore alt names
             let fid = tr.dataset.fid;
             nameInput.onfocus = function() {nameSelected(fid)};
             nameInput.oninput = function() {nameChanged(fid, nameInput.value)};
@@ -450,7 +473,8 @@
 
     function nameChanged(fid, name) {
         feat = namesLayer.getSource().getFeatureById(fid);
-        feat.set('name', name);
+        //feat.set('name', name);
+        feat.get('boundary_refs')[0]['names'] = [name];
     };
 
     function nameSelected(fid) {
