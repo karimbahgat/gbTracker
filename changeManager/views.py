@@ -31,6 +31,9 @@ def source(request, pk):
         return render(request, 'source_data.html', context)
         
     elif src.type == 'MapSource':
+        levels = src.boundary_refs.all().values_list('level').distinct()
+        levels = [lvl[0] for lvl in levels]
+        context['levels'] = sorted(levels)
         return render(request, 'source_map.html', context)
 
 def datasource_add(request):

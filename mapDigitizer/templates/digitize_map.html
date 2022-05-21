@@ -28,10 +28,17 @@
     #border-levels-table {
         width: 100%;
     }
-    #digitize-tab, #names-tab {
+    #borders-tab, #names-tab {
         height: 380px;
         overflow: auto;
     }
+    /*
+    thead tr th {
+        position: sticky;
+        top: 0;
+        background: 'white';
+    }
+    */
 </style>
 
 <!-- Form -->
@@ -46,11 +53,11 @@
                 <div id="tab-container" class="tab-container">
 
                     <ul class='etabs'>
-                        <li class='tab active'><a href="#digitize-tab">Digitize</a></li>
-                        <li class='tab'><a href="#names-tab">Names</a></li>
+                        <li class='tab'><a href="#borders-tab" onclick="borderMode()">Boundaries</a></li>
+                        <li class='tab'><a href="#names-tab" onclick="namesMode()">Names</a></li>
                     </ul>
 
-                    <div id="digitize-tab" class="box">
+                    <div id="borders-tab" class="box">
 
                         <div style="width:100%; text-align:right">
                             <span><button type="button" class="small" onclick="submitDigitizedData()">Save</button></span>
@@ -70,15 +77,45 @@
                             <span><button class="small" onclick="addNewLevel()">Add level</button></span>
                         </div>
 
-                        <form id="digitize-form" method="POST" action="{% url 'digitize_map' source.pk %}">
+                        <form id="borders-form" method="POST" action="{% url 'digitize_map' source.pk %}">
                             {% csrf_token %}
                             <input type="hidden" name="data" value="{}">
                         </form>
 
-
                     </div>
 
                     <div id="names-tab" class="box">
+
+                        <div style="width:100%; text-align:right">
+                            <span><button type="button" class="small" onclick="">Save</button></span>
+                        </div>
+
+                        <div id="namelevels-tab-container" class="tab-container">
+
+                            <ul class='etabs'>
+                                {% for lvl in levels %}
+                                    <li class='tab'><a href="#namelevels-tab-{{ lvl }}" onclick="filterNamesLevel({{ lvl }})">ADM{{ lvl }}</a></li>
+                                {% endfor %}
+                            </ul>
+
+                            {% for lvl in levels %}
+                                <div id="namelevels-tab-{{ lvl }}" class="box">
+                                    <h3>Boundary Names</h3>
+                                    <div style="height:190px; overflow:auto">
+                                        <table>
+                                            <thead>
+                                                <th></th>
+                                                <th>Name</th>
+                                            </thead>
+                                            <tbody>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                            
+                        </div>
+
                     </div>
 
                 </div>
@@ -97,6 +134,7 @@
 <script>
     // tab init
 	$(document).ready(function () { $('#tab-container').easytabs({animate:false}); });
+    $(document).ready(function () { $('#namelevels-tab-container').easytabs({animate:false}); });
 
     // https://stackoverflow.com/questions/63086424/openlayers-dynamic-image-sizes
 
@@ -191,10 +229,45 @@
         })
     });
 
-    //var labelLayer = new ol.layer.Vector({
-    //    source: new ol.source.Vector(),
-    //    //style: style,
-    //});
+    // names layer
+
+    var namesStyle = new ol.style.Style({
+        fill: new ol.style.Fill({
+            color: 'rgba(255, 120, 120, 0.5)'
+        }),
+        stroke: new ol.style.Stroke({
+            color: 'rgb(29,107,191)',
+            width: 2
+        }),
+        text: new ol.style.Text({
+            font:'15px sans-serif',
+            overflow:true,
+            stroke: new ol.style.Stroke({
+                color: 'rgb(255,255,255)',
+                width: 2
+            })
+        })
+    });
+
+    var namesLayer = new ol.layer.Vector({
+        source: new ol.source.Vector(),
+        style: function (feature) {
+            let style = namesStyle.clone();
+            // set name label
+            let name = feature.get('name');
+            style.getText().setText(name);
+            // set feature color
+            if (name) {
+                // features with name get stronger color
+                fillColor = 'rgba(120, 255, 120, 0.5)';
+            } else {
+                // features without name uses default color
+                fillColor = namesStyle.getFill().getColor(); 
+            };
+            style.getFill().setColor(fillColor);
+            return style;
+        },
+    });
 
     // map
     var borderLayers = [adm0Layer, adm1Layer, adm2Layer, adm3Layer, adm4Layer, adm5Layer];
@@ -202,6 +275,8 @@
     for (lyr of borderLayers) {
         layers.push(lyr);
     };
+    layers.push(namesLayer);
+
     var map = new ol.Map({
         target: 'map',
         controls: ol.control.defaults().extend([new ol.control.FullScreen(),
@@ -214,6 +289,17 @@
             zoom: 2
         })
     });
+
+    function clearLayers() {
+        map.getLayerGroup().setLayers(new ol.Collection());
+    };
+
+    function setLayers(layers) {
+        clearLayers();
+        for (lyr of layers) {
+            map.addLayer(lyr);
+        };
+    };
 
     /////////////////////////////
     // drawing functionality
@@ -294,6 +380,116 @@
         enableEditInteraction(lyr);
     };
 
+
+    // names labelling functionality
+    function showNamesLevel() {
+        // get current names level tab
+        tablist = document.querySelector('#names-tab .tab-container .etabs');
+        curTab = tablist.querySelector('li .active');
+        curLevel = parseInt(curTab.innerText[curTab.innerText.length-1]);
+        // filter names layer to the current level
+        filterNamesLevel(curLevel);
+    };
+
+    function filterNamesLevel(lvl) {
+        console.log('filter to ADM'+lvl)
+        namesLayer.getSource().forEachFeature(
+            function (feat) {
+                featLevel = feat.getProperties()['boundary_refs'][0]['level'];
+                if (featLevel == lvl) {
+                    // show with default style
+                    feat.setStyle(null);
+                } else {
+                    // hide
+                    feat.setStyle(new ol.style.Style({}));
+                };
+            }
+        );
+    };
+
+    function loadNamesData(namesData) {
+        reader = new ol.format.GeoJSON({});
+        feats = [];
+        for (feat of namesData) {
+            feat = reader.readFeature(feat);
+            feats.push(feat);
+            feat.setId(feats.length);
+        };
+        namesLayer.getSource().addFeatures(feats);
+    };
+
+    function populateNamesTables(namesData) {
+        let i = 1;
+        for (feat of namesData) {
+            // fetch the table of the respective adm level
+            lvl = feat['properties']['boundary_refs'][0]['level']
+            tableId = '#namelevels-tab-'+lvl;
+            tbody = document.querySelector(tableId + ' table tbody');
+            // add feature row
+            tr = document.createElement('tr');
+            tr.dataset.fid = i;
+            i += 1;
+            tbody.appendChild(tr);
+            // row nr
+            rowNum = tbody.querySelectorAll('tr').length;
+            td = document.createElement('td');
+            td.innerText = rowNum;
+            tr.appendChild(td);
+            // row name
+            td = document.createElement('td');
+            let nameInput = document.createElement('input');
+            nameInput.type = 'text';
+            nameInput.innerText = feat['properties']['boundary_refs'][0]['names'];
+            let fid = tr.dataset.fid;
+            nameInput.onfocus = function() {nameSelected(fid)};
+            nameInput.oninput = function() {nameChanged(fid, nameInput.value)};
+            td.appendChild(nameInput);
+            tr.appendChild(td);
+        };
+    };
+
+    function nameChanged(fid, name) {
+        feat = namesLayer.getSource().getFeatureById(fid);
+        feat.set('name', name);
+    };
+
+    function nameSelected(fid) {
+        // zoom to feature
+        feat = namesLayer.getSource().getFeatureById(fid);
+        extent = feat.getGeometry().getExtent();
+        map.getView().fit(extent,
+            {'duration':500, 'padding':[10,10,10,10]},
+        );
+    };
+
+    function nameFeatureClicked(feat) {
+        // fetch the table of the respective adm level
+        lvl = feat.get('boundary_refs')[0]['level'];
+        tableId = '#namelevels-tab-'+lvl;
+        tbody = document.querySelector(tableId + ' table tbody');
+        // find the row with the same fid
+        fid = feat.getId();
+        rows = tbody.querySelectorAll('tr');
+        for (row of rows) {
+            if (row.dataset.fid == fid) {
+                input = row.querySelector('input');
+                input.scrollIntoView();
+                input.focus();
+                break;
+            };
+        };
+    };
+
+    function listenNameFeatureClicked(evt) {
+        map.forEachFeatureAtPixel(evt.pixel, function(feat, lyr) {
+            if (lyr == namesLayer) {
+                nameFeatureClicked(feat);
+            };
+        });
+    };
+
+    map.on('click', listenNameFeatureClicked)
+
     // digitizing, data loading, and submission
 
     function loadDigitizedData(lvl) {
@@ -333,13 +529,13 @@
             data['ADM'+i] = coll;
         };
         // write as json string to the data input
-        form = document.getElementById("digitize-form");
+        form = document.getElementById("borders-form");
         form.querySelector("input[name='data']").value = JSON.stringify(data);
         // submit the form
         form.submit();
     };
 
-    // data init
+    // boundary data init
     dataString = '{{ source.digitizer.digitized_data_json|safe }}';
     if (dataString) {
         data = JSON.parse(dataString);
@@ -354,11 +550,80 @@
             addNewLevel();
             loadDigitizedData(lvl);
         };
-
     } else {
         // no data, just add the first adm0 level
         addNewLevel();
     };
+
+    // names data init
+    namesDataString = '{{ source.digitizer.polygonized_data_json|safe }}';
+    if (namesDataString) {
+        namesData = JSON.parse(namesDataString);
+    } else {
+        namesData = null;
+    };
+
+    if (namesData) {
+        // get unique levels
+        levels = {};
+        for (feat of namesData) {
+            lvl = feat['level'];
+            levels[lvl] = null;
+        };
+        // add names table for each level
+        levels = Object.keys(levels);
+        levels.sort();
+        //for (lvl of levels) {
+        //    addNewNamesLevel();
+        //};
+        // load names data to map
+        loadNamesData(namesData);
+        // populate names tables
+        populateNamesTables(namesData);
+    };
+
+    // tab switching
+    function borderMode() {
+        var layers = [mapLayer];
+        for (lyr of borderLayers) {
+            layers.push(lyr);
+        };
+        setLayers(layers);
+    };
+
+    function namesMode() {
+        var layers = [mapLayer, namesLayer];
+        setLayers(layers);
+        showNamesLevel();
+    };
+
+    // set initial tab
+    urlHash = window.location.hash;
+    console.log(urlHash);
+    if (urlHash == '#borders-tab') {
+        borderMode();
+    } else if (urlHash.startsWith('#name')) {
+        namesMode();
+    } else {
+        borderMode(); // default
+    };
+    
+
+    /*
+    function tabSwitch() {
+        tablist = document.querySelector('#tab-container .etabs');
+        console.log(tablist)
+        curTab = tablist.querySelector('li .active');
+        console.log(curTab)
+        curName = curTab.innerText;
+        if (curName == 'Boundaries') {
+            borderMode();
+        } else if (curName == 'Names') {
+            namesMode();
+        };
+    };
+    document.getElementById('tab-container').bind('easytabs:after', tabSwitch())
+    */
 
 </script>
 

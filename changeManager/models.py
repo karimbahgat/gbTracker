@@ -57,7 +57,7 @@ class BoundaryReference(models.Model):
         return full_name
 
     def serialize(self, snapshots=True):
-        boundary_refs = [{'id':p.id, 'names':[n.name for n in p.names.all()]}
+        boundary_refs = [{'id':p.id, 'names':[n.name for n in p.names.all()], 'level':p.level}
                         for p in self.get_all_parents()]
         source = self.source
         dct = {'id':self.pk,

@@ -22,12 +22,11 @@ def digitize_map(request, pk):
             # save raw digitizing data
             data = request.POST['data']
             data = json.loads(data)
-            print(data)
             digitizer,created = MapDigitizer.objects.get_or_create(source=source)
             digitizer.digitized_data = data
             digitizer.last_digitized = timezone.now()
             digitizer.save()
             # attempt to create snapshots from digitized line data
-            #...
+            digitizer.build()
 
         return redirect('source', source.pk)
