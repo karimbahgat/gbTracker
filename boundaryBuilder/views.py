@@ -68,7 +68,10 @@ def api_track(request):
     # then snapshot sources
     sources = models.BoundarySource.objects.filter(type__in=('DataSource','MapSource'), boundary_refs__parent__names__name=country, boundary_refs__snapshots__id__isnull=False).distinct()
     for source in sources:
-        entry = {'type':source.type, 'source':source.name, 'source_id':source.pk}
+        entry = {'type':source.type, 
+                'source':source.name, 
+                'source_id':source.pk,
+                'source_url':source.url}
 
         snaps = models.BoundarySnapshot.objects.filter(boundary_ref__source__pk=source.pk, boundary_ref__parent__names__name=country)
         agg = snaps.aggregate(Min('event__date_start'), Max('event__date_end'))

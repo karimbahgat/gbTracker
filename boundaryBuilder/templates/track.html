@@ -301,6 +301,34 @@
 
                 mapNum += 1;
             };
+
+            // map boundary snapshots
+            if (entry.type == 'MapSource') {
+                titleDiv = document.createElement('h4');
+                titleDiv.className = "row";
+                icon = document.createElement('img');
+                icon.style = "height:20px"
+                icon.src = "{% static 'images/map.png' %}";
+                titleDiv.appendChild(icon);
+                title = document.createElement('h4');
+                sourceLink = `<a href="/source/${entry.source_id}">${entry.source}</a>`;
+                title.innerHTML = `Map Snapshot from ${sourceLink}`;
+                titleDiv.appendChild(title);
+                content.appendChild(titleDiv);
+                mapDiv = document.createElement('div');
+                mapDiv.id = 'snapshot-map-' + mapNum;
+                mapDiv.style = 'width:100%; height:300px';
+                content.appendChild(mapDiv);
+                details = document.createElement('span');
+                details.innerHTML = `${entry.snapshots.length} Boundaries`;
+                content.appendChild(details);
+                entryDiv.appendChild(content);
+
+                // create and load snapshot map
+                createMapSourceMap(mapNum, entry.source_url, entry.snapshots);
+
+                mapNum += 1;
+            };
             
         };
     };
@@ -354,6 +382,73 @@
         // add map data
         function addLayerData(data) {
             feats = new ol.format.GeoJSON().readFeatures(data, {dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857'});
+            // add and zoom the data
+            snapshotLayer.getSource().addFeatures(feats);
+            map.getView().fit(snapshotLayer.getSource().getExtent());
+        };
+        let snapshotUrl = "{% url 'api_snapshots' %}?ids=" + snapshotIds.join(',');
+        fetch(snapshotUrl).then(resp=>resp.json()).then(data=>addLayerData(data));
+        
+    }
+
+    function createMapSourceMap(mapId, mapUrl, snapshotIds) {
+        // image pixel projection
+        const projection = new ol.proj.Projection({
+            code: 'pixel-map',
+            units: 'pixels',
+            extent: [0, 0, 10000, 10000],
+        });
+
+        // snapshot layer
+        let snapshotLayer = new ol.layer.Vector({
+            source: new ol.source.Vector(),
+            style: mainStyle,
+        });
+
+        // map image layer
+        let mapLayer = new ol.layer.Image({});
+        function setImageSource (url) {
+            // clear old source
+            mapLayer.setSource();
+            if (!url) {
+                url = 'https://www.av.se/Static/images/placeholder.png';
+            };
+            // what to do on image load
+            const img = document.createElement('img');
+            img.onload = function() {
+                // get image extent
+                const extent = [0, 0, img.width, img.height];
+                // set source
+                mapLayer.setSource(
+                    new ol.source.ImageStatic({
+                        url: url,
+                        imageExtent: extent,
+                    }),
+                );
+                // zoom to image extent
+                //map.getView().fit(mapLayer.getSource().getImageExtent())
+            };
+            // begin loading image
+            img.src = url;
+        };
+        setImageSource(mapUrl);
+
+        // map
+        let map = new ol.Map({
+            target: 'snapshot-map-' + mapId,
+            controls: ol.control.defaults().extend([new ol.control.ScaleLine({units: 'metric'}),
+                                                    ]),
+            layers: [mapLayer,snapshotLayer],
+            view: new ol.View({
+                projection,
+                center: [0,0], //getCenter(extent),
+                zoom: 2
+            })
+        });
+
+        // add map data
+        function addLayerData(data) {
+            feats = new ol.format.GeoJSON().readFeatures(data, {});
             // add and zoom the data
             snapshotLayer.getSource().addFeatures(feats);
             map.getView().fit(snapshotLayer.getSource().getExtent());
