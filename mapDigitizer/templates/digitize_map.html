@@ -79,11 +79,6 @@
                             <span><button class="small" onclick="addNewLevel()">Add level</button></span>
                         </div>
 
-                        <form id="borders-form" method="POST" action="{% url 'digitize_map' source.pk %}">
-                            {% csrf_token %}
-                            <input type="hidden" name="data" value="{}">
-                        </form>
-
                     </div>
 
                     <div id="names-tab" class="box">
@@ -101,7 +96,7 @@
                             </ul>
 
                             {% for lvl in levels %}
-                                <div id="namelevels-tab-{{ lvl }}" class="box">
+                                <div id="namelevels-tab-{{ lvl }}" class="box" style="margin-bottom:0">
                                     <h3>ADM{{ lvl }} Names</h3>
                                     <div style="height:190px; overflow:auto">
                                         <table>
@@ -118,14 +113,21 @@
                             
                         </div>
 
-                        <form id="names-form" method="POST" action="{% url 'label_map' source.pk %}">
-                            {% csrf_token %}
-                            <input type="hidden" name="data" value="{}">
-                        </form>
-
                     </div>
 
                 </div>
+
+                <!-- some hidden forms -->
+
+                <form id="borders-form" method="POST" action="{% url 'digitize_map' source.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="data" value="{}">
+                </form>
+
+                <form id="names-form" method="POST" action="{% url 'label_map' source.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="data" value="{}">
+                </form>
 
             </div>
             
@@ -483,6 +485,7 @@
         lvl = tbody.querySelectorAll('tr').length;
 
         tr = document.createElement('tr');
+        tr.dataset.level = lvl;
         tbody.appendChild(tr);
 
         td = document.createElement('td');
@@ -498,7 +501,8 @@
         addBut = '<button class="small" onclick="drawBorderLevel('+lvl+')">+</button>';
         //editIcon = "{% static 'mapDigitizer/images/edit.png' %}";
         editBut = '<button class="small" onclick="editBorderLevel('+lvl+')">Edit</button>';
-        buttons.innerHTML = addBut + editBut;
+        dropBut = '<button class="small" onclick="dropBorderLevel('+lvl+')">Drop</button>';
+        buttons.innerHTML = addBut + editBut + dropBut;
         /*
         addBut = document.createElement('button');
         addBut.className = 'small';
@@ -516,6 +520,20 @@
     function editBorderLevel(lvl) {
         lyr = borderLayers[lvl];
         enableEditInteraction(lyr);
+    };
+
+    function dropBorderLevel(lvl) {
+        // clear all features from map layer
+        lyr = borderLayers[lvl];
+        lyr.getSource().clear();
+        // remove from table
+        tbody = document.querySelector('#border-levels-table tbody');
+        rows = tbody.querySelectorAll('tr');
+        for (let row of rows) {
+            if (row.dataset.level == lvl) {
+                row.remove();
+            };
+        };
     };
 
 

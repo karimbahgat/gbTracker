@@ -127,9 +127,12 @@ class MapDigitizer(models.Model):
                     candidates = level_colls[parent_lvl].geoms
                     parent_i = find_parent(geom, candidates)
                     if parent_i is None:
-                        # ignore parts that dont belong to any parent? 
-                        continue
-                    parent = level_refs[parent_lvl][parent_i]
+                        # what to do with parts that dont belong to any parent? 
+                        # for now just allow, though will probably break something
+                        parent = None
+                    else:
+                        parent = level_refs[parent_lvl][parent_i]
+                    
                 ref = BoundaryReference(parent=parent, source=self.source, level=int(lvl[-1]))
                 refs.append(ref)
                 snapshot = BoundarySnapshot(event=event, boundary_ref=ref, geom=geom.__geo_interface__)
