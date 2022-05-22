@@ -181,7 +181,8 @@
     url = "{{ source.url }}";
     setImageSource(url);
 
-    // debug styling
+    // dangles styling
+
     function getDangles(feature) {
         multiline = feature.getGeometry().getCoordinates();
         line = multiline[0];
@@ -220,14 +221,46 @@
         image: new ol.style.Circle({
             radius: 4,
             fill: new ol.style.Fill({
-                color: 'rgba(255,0,0,0)',
+                color: 'rgba(0,0,0,0)',
+            }),
+            stroke: new ol.style.Stroke({
+                color: 'blue',
+                width: 2,
+            }),
+         }),
+        geometry: getDangles
+    });
+
+    // self intersection styling
+
+    function getSelfIntersections(feature) {
+        multiline = feature.getGeometry().getCoordinates();
+        line = multiline[0];
+        // get self intersections
+        geom = turf.lineString(line);
+        isecs = turf.kinks(geom);
+        // make into openlayers multipoint
+        points = [];
+        for (f of isecs['features']) {
+            p = f['geometry']['coordinates'];
+            points.push(p);
+        };
+        geom = new ol.geom.MultiPoint(points);
+        return geom;
+    };
+
+    selfIsecStyle = new ol.style.Style({
+        image: new ol.style.Circle({
+            radius: 4,
+            fill: new ol.style.Fill({
+                color: 'rgba(0,0,0,0)',
             }),
             stroke: new ol.style.Stroke({
                 color: 'red',
                 width: 2,
             }),
          }),
-        geometry: getDangles
+        geometry: getSelfIntersections
     });
 
     // border layers
@@ -261,6 +294,7 @@
         styles = [
             getBorderStyle(feature),
             danglesStyle,
+            selfIsecStyle,
         ];
         return styles;
     };
