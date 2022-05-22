@@ -113,7 +113,8 @@ class MapDigitizer(models.Model):
         new_snapshots = []
         def find_parent(geom, candidates):
             for i,cand in enumerate(candidates):
-                if cand.overlaps(geom):
+                # NOT VERY EFFICIENT! 
+                if cand.intersects(geom) and cand.intersection(geom).area > 0:
                     return i
         level_refs = {}
         for lvl,coll in level_colls.items():
@@ -126,7 +127,7 @@ class MapDigitizer(models.Model):
                     candidates = level_colls[parent_lvl].geoms
                     parent_i = find_parent(geom, candidates)
                     if parent_i is None:
-                        # ignore parts that dont belong to any parent
+                        # ignore parts that dont belong to any parent? 
                         continue
                     parent = level_refs[parent_lvl][parent_i]
                 ref = BoundaryReference(parent=parent, source=self.source, level=int(lvl[-1]))
