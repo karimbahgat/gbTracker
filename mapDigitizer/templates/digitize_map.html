@@ -192,7 +192,6 @@
             lyr.getSource().forEachFeature( function(feat) {
                 if (feature != feat) {
                     multiline = feat.getGeometry().getCoordinates();
-                    console.log(multiline);
                     allLines.push(multiline[0]);
                 };
             });
@@ -263,6 +262,49 @@
         geometry: getSelfIntersections
     });
 
+    // intersection styling
+
+    function getIntersections(feature) {
+        multiline = feature.getGeometry().getCoordinates();
+        line = multiline[0];
+        // get all feats except current feat
+        allLines = [];
+        for (lyr of [adm0Layer,adm1Layer,adm2Layer]) {
+            lyr.getSource().forEachFeature( function(feat) {
+                if (feature != feat) {
+                    multiline = feat.getGeometry().getCoordinates();
+                    allLines.push(multiline[0]);
+                };
+            });
+        };
+        // get intersections
+        geom = turf.lineString(line);
+        otherGeom = {type:'Polygon', coordinates:allLines};
+        isecs = turf.lineIntersect(geom, otherGeom);
+        // make into openlayers multipoint
+        points = [];
+        for (f of isecs['features']) {
+            p = f['geometry']['coordinates'];
+            points.push(p);
+        };
+        geom = new ol.geom.MultiPoint(points);
+        return geom;
+    };
+
+    isecStyle = new ol.style.Style({
+        image: new ol.style.Circle({
+            radius: 4,
+            fill: new ol.style.Fill({
+                color: 'rgba(0,0,0,0)',
+            }),
+            stroke: new ol.style.Stroke({
+                color: 'red',
+                width: 2,
+            }),
+         }),
+        geometry: getIntersections
+    });
+
     // border layers
     function getBorderStyle(feature) {
         let lvl = feature.get('level');
@@ -293,8 +335,9 @@
     function getStyle(feature) {
         styles = [
             getBorderStyle(feature),
-            danglesStyle,
-            selfIsecStyle,
+            danglesStyle, // blue
+            selfIsecStyle, // red
+            isecStyle, // red
         ];
         return styles;
     };
