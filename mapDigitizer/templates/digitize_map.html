@@ -448,14 +448,21 @@
     let modify;
     let snap;
     
-    function enableDrawInteraction(lyr) {
+    function enableDrawInteraction(lyr, lvl) {
         try {map.removeInteraction(snap)} catch {};
         try {map.removeInteraction(draw)} catch {};
         draw = new ol.interaction.Draw({
             source: lyr.getSource(),
             type: 'MultiLineString',
+            //style: getBorderStyle,
+        });
+        // set feature level property to allow proper styling of drawn feature
+        draw.on('drawend', function(event) {
+            feat = event.feature;
+            feat.set('level', lvl);
         });
         map.addInteraction(draw);
+        // add snap effect
         snap = new ol.interaction.Snap({
             source: lyr.getSource()
         });
@@ -476,6 +483,32 @@
         map.addInteraction(snap);
     };
 
+    function getLevelSymbol(lvl) {
+        // create canvas
+        canvas = document.createElement('canvas');
+        canvas.width = '25';
+        canvas.height = '10';
+        ctx = canvas.getContext('2d');
+        // customize line from the layer style
+        f = new ol.Feature({level:lvl});
+        style = getBorderStyle(f);
+        stroke = style.getStroke();
+        dash = stroke.getLineDash();
+        if (dash) {
+            ctx.setLineDash(dash);
+        };
+        color = stroke.getColor();
+        ctx.strokeStyle = color;
+        width = stroke.getWidth();
+        ctx.lineWidth = width;
+        // draw line
+        ctx.beginPath();
+        ctx.moveTo(0, 5);
+        ctx.lineTo(25, 5);
+        ctx.stroke();
+        return canvas;
+    };
+
     function addNewLevel() {
         newLevelRow();
     };
@@ -489,9 +522,18 @@
         tbody.appendChild(tr);
 
         td = document.createElement('td');
+        td.style = 'vertical-align:middle';
         tr.appendChild(td);
-        td.innerHTML = '<span>ADM'+lvl+'</span>';
-
+        flex = document.createElement('div');
+        flex.style = 'display:flex; flex-direction:row';
+        canvas = getLevelSymbol(lvl);
+        canvas.style = 'margin:0 5px';
+        span = document.createElement('span');
+        span.innerText = 'ADM'+lvl;
+        flex.appendChild(canvas);
+        flex.appendChild(span);
+        td.appendChild(flex);
+        
         td = document.createElement('td');
         td.style = "text-align:right";
         tr.appendChild(td);
@@ -514,7 +556,7 @@
 
     function drawBorderLevel(lvl) {
         lyr = borderLayers[lvl];
-        enableDrawInteraction(lyr);
+        enableDrawInteraction(lyr, lvl);
     };
 
     function editBorderLevel(lvl) {
