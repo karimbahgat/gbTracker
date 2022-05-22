@@ -9,6 +9,8 @@
 <script src="{% static 'js/jquery.easytabs.js' %}" type="text/javascript"></script>
 <!--<script type="text/javascript" src="http://code.jquery.com/jquery-migrate-1.2.1.min.js"></script>-->
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js" integrity="sha512-Q7HOppxoH0L2M7hreVoFCtUZimR2YaY0fBewIYzkCgmNtgOOZ5IgMNYxHgfps0qrO1ef5m7L1FeHrhXlq1I9HA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
 <!-- style -->
 <style>
     #map-and-tools {
@@ -179,59 +181,113 @@
     url = "{{ source.url }}";
     setImageSource(url);
 
+    // debug styling
+    function getDangles(feature) {
+        multiline = feature.getGeometry().getCoordinates();
+        line = multiline[0];
+        // get all feats except current feat
+        allLines = [];
+        for (lyr of [adm0Layer,adm1Layer,adm2Layer]) {
+            lyr.getSource().forEachFeature( function(feat) {
+                if (feature != feat) {
+                    multiline = feat.getGeometry().getCoordinates();
+                    console.log(multiline);
+                    allLines.push(multiline[0]);
+                };
+            });
+        };
+        // check for dangles (line endpoints that dont touch any other line)
+        dangles = [];
+        otherGeom = turf.multiLineString(allLines);
+        // check start point
+        geom = turf.point(line[0]);
+        isec = turf.booleanIntersects(geom, otherGeom);
+        if (!isec) {
+            dangles.push(geom['geometry']['coordinates']);
+        };
+        // check end point
+        geom = turf.point(line[line.length-1]);
+        isec = turf.booleanIntersects(geom, otherGeom);
+        if (!isec) {
+            dangles.push(geom['geometry']['coordinates']);
+        };
+        // make dangles into openlayers multipoint
+        olGeom = new ol.geom.MultiPoint(dangles);
+        return olGeom;
+    };
+
+    danglesStyle = new ol.style.Style({
+        image: new ol.style.Circle({
+            radius: 4,
+            fill: new ol.style.Fill({
+                color: 'rgba(255,0,0,0)',
+            }),
+            stroke: new ol.style.Stroke({
+                color: 'red',
+                width: 2,
+            }),
+         }),
+        geometry: getDangles
+    });
+
     // border layers
+    function getBorderStyle(feature) {
+        let lvl = feature.get('level');
+        // border width decreases with each level
+        let width = 3 - 0.5*lvl;
+        // border line
+        if (lvl > 0) {
+            // adm1 and higher have dashes that increase with level
+            let dashSize = 10 - 2*lvl;
+            let lineDash = [dashSize, dashSize];
+            stroke = new ol.style.Stroke({
+                width: width,
+                lineDash: lineDash,
+            });
+        } else {
+            // adm0 only have a solid line
+            stroke = new ol.style.Stroke({
+                width: width,
+            });
+        };
+        // return style
+        style = new ol.style.Style({
+            stroke: stroke
+        });
+        return style;
+    };
+
+    function getStyle(feature) {
+        styles = [
+            getBorderStyle(feature),
+            danglesStyle,
+        ];
+        return styles;
+    };
+
     var adm0Layer = new ol.layer.Vector({
         source: new ol.source.Vector(),
-        style: new ol.style.Style({
-            stroke: new ol.style.Stroke({
-                width: 3
-            })
-        })
+        style: getStyle,
     });
     var adm1Layer = new ol.layer.Vector({
         source: new ol.source.Vector(),
-        style: new ol.style.Style({
-            stroke: new ol.style.Stroke({
-                width: 2.5,
-                lineDash: [10, 10] //or other combinations
-            })
-        })
+        style: getStyle,
     });
     var adm2Layer = new ol.layer.Vector({
         source: new ol.source.Vector(),
-        style: new ol.style.Style({
-            stroke: new ol.style.Stroke({
-                width: 2,
-                lineDash: [8, 8] //or other combinations
-            })
-        })
+        style: getStyle,
     });
     var adm3Layer = new ol.layer.Vector({
         source: new ol.source.Vector(),
-        style: new ol.style.Style({
-            stroke: new ol.style.Stroke({
-                width: 1.5,
-                lineDash: [6, 6] //or other combinations
-            })
-        })
+        style: getStyle,
     });
     var adm4Layer = new ol.layer.Vector({
         source: new ol.source.Vector(),
-        style: new ol.style.Style({
-            stroke: new ol.style.Stroke({
-                width: 1,
-                lineDash: [4, 4] //or other combinations
-            })
-        })
+        style: getStyle,
     });
     var adm5Layer = new ol.layer.Vector({
         source: new ol.source.Vector(),
-        style: new ol.style.Style({
-            stroke: new ol.style.Stroke({
-                width: 0.5,
-                lineDash: [2, 2] //or other combinations
-            })
-        })
+        style: getStyle,
     });
 
     // names layer
@@ -526,7 +582,8 @@
         lyr = borderLayers[lvl];
         feats = [];
         for (geom of coll['geometries']) {
-            feat = {type:'Feature', geometry:geom}
+            props = {level: lvl};
+            feat = {type:'Feature', geometry:geom, properties:props};
             feat = reader.readFeature(feat);
             feats.push(feat);
             feat.setId(feats.length);
