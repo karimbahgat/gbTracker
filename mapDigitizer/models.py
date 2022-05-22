@@ -106,8 +106,8 @@ class MapDigitizer(models.Model):
         level_colls = self.polygonize(data)
         # build these as snapshots
         print('build snapshots')
-        from datetime import date
-        start,end = date.today(),date.today()
+        start = self.source.valid_from
+        end = self.source.valid_to
         event = Event(date_start=start, date_end=end)
         outdated_snapshots = []
         new_snapshots = []

@@ -18,8 +18,8 @@ class BoundarySource(models.Model):
     name = models.CharField(max_length=200)
     #created_by = ... # this should be a required User reference
     #last_updated = models.DateTimeField(auto_now=True)
-    #valid_from = models.DateField(null=True, blank=True)
-    #valid_to = models.DateField(null=True, blank=True)
+    valid_from = models.DateField(null=True, blank=True)
+    valid_to = models.DateField(null=True, blank=True)
     citation = models.TextField(blank=True, null=True)
     #lineage = models.TextField(blank=True, null=True)
     note = models.TextField(blank=True, null=True)
