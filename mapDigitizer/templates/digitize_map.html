@@ -259,7 +259,7 @@
         style: function (feature) {
             let style = namesStyle.clone();
             // set name label
-            let name = feature.get('boundary_refs')[0]['names'][0]; // ignore alt names
+            let name = feature.get('names')[0]; // ignore alt names
             style.getText().setText(name);
             // set feature color
             if (name) {
@@ -397,10 +397,10 @@
     };
 
     function filterNamesLevel(lvl) {
-        console.log('filter to ADM'+lvl)
+        //console.log('filter to ADM'+lvl)
         namesLayer.getSource().forEachFeature(
             function (feat) {
-                featLevel = feat.getProperties()['boundary_refs'][0]['level'];
+                featLevel = feat.get('level');
                 if (featLevel == lvl) {
                     // show with default style
                     feat.setStyle(null);
@@ -430,7 +430,7 @@
                 // Get the feature's db pk, which is different from .getId()
                 let pk = feat.get('id');
                 // Set the name of each pk
-                let names = feat.get('boundary_refs')[0]['names'];
+                let names = feat.get('names');
                 data[pk] = names;
             }
         );
@@ -445,7 +445,7 @@
         let i = 1;
         for (feat of namesData) {
             // fetch the table of the respective adm level
-            lvl = feat['properties']['boundary_refs'][0]['level']
+            lvl = feat['properties']['level']
             tableId = '#namelevels-tab-'+lvl;
             tbody = document.querySelector(tableId + ' table tbody');
             // add feature row
@@ -462,7 +462,10 @@
             td = document.createElement('td');
             let nameInput = document.createElement('input');
             nameInput.type = 'text';
-            nameInput.value = feat['properties']['boundary_refs'][0]['names'][0]; // ignore alt names
+            names = feat['properties']['names'];
+            if (names.length) {
+                nameInput.value = names[0]; // ignore alt names
+            };
             let fid = tr.dataset.fid;
             nameInput.onfocus = function() {nameSelected(fid)};
             nameInput.oninput = function() {nameChanged(fid, nameInput.value)};
@@ -472,9 +475,10 @@
     };
 
     function nameChanged(fid, name) {
+        //console.log(fid+' '+name)
         feat = namesLayer.getSource().getFeatureById(fid);
-        //feat.set('name', name);
-        feat.get('boundary_refs')[0]['names'] = [name];
+        feat.set('names', [name]); // ignore alt names
+        //feat.get('boundary_refs')[0]['names'] = [name];
     };
 
     function nameSelected(fid) {
@@ -488,7 +492,7 @@
 
     function nameFeatureClicked(feat) {
         // fetch the table of the respective adm level
-        lvl = feat.get('boundary_refs')[0]['level'];
+        lvl = feat.get('level');
         tableId = '#namelevels-tab-'+lvl;
         tbody = document.querySelector(tableId + ' table tbody');
         // find the row with the same fid
@@ -587,11 +591,19 @@
         namesData = null;
     };
 
+    for (feat of namesData) {
+        // hacky set names and levels to toplevel of properties
+        // because openlayers doesnt seem to respond to changes in nested
+        // property values... 
+        feat['properties']['level'] = feat['properties']['boundary_refs'][0]['level'];
+        feat['properties']['names'] = feat['properties']['boundary_refs'][0]['names'];
+    }
+
     if (namesData) {
         // get unique levels
         levels = {};
         for (feat of namesData) {
-            lvl = feat['level'];
+            lvl = feat['properties']['level'];
             levels[lvl] = null;
         };
         // add names table for each level

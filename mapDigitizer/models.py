@@ -212,4 +212,6 @@ class MapDigitizer(models.Model):
                 for name in names:
                     name,created = BoundaryName.objects.get_or_create(name=name)
                     ref.names.add(name)
+                # save
+                ref.save()
 
