@@ -189,7 +189,35 @@
     /////////////
     // main map
 
-    // layer
+    // styling
+    function getLargestGeom(feature) {
+        // create a geometry that defines where the label will be display
+        var geom = feature.getGeometry();
+        if (geom.getType() == 'Polygon') {
+            // polygon
+            // place label at the bbox/center of the polygon
+            var extent = feature.getGeometry().getExtent();
+            var newGeom = ol.geom.Polygon.fromExtent(extent);
+        } else {
+            // multi polygon
+            // place label at the bbox/center of the largest polygon
+            var largestGeom = null;
+            var largestArea = null;
+            for (poly of geom.getPolygons()) {
+                var extent = poly.getExtent();
+                var extentGeom = ol.geom.Polygon.fromExtent(extent);
+                var extentArea = extentGeom.getArea();
+                if (extentArea > largestArea) {
+                    largestGeom = extentGeom;
+                    largestArea = extentArea;
+                };
+            };
+            var newGeom = largestGeom;
+            
+        };
+        return newGeom;
+    };
+
     var mainStyle = new ol.style.Style({
         fill: new ol.style.Fill({
             color: 'rgba(220, 220, 255, 0.5)'
@@ -197,11 +225,33 @@
         stroke: new ol.style.Stroke({
             color: 'rgb(29,107,191)',
             width: 2
-        }),
+        })
     });
+
+    var textStyle = new ol.style.Style({
+        text: new ol.style.Text({
+            font:'15px sans-serif',
+            overflow:true,
+            stroke: new ol.style.Stroke({
+                color: 'rgb(255,255,255)',
+                width: 2
+            })
+        }),
+        geometry: getLargestGeom
+    });
+
+    function mainGetStyle(feature) {
+        let _textStyle = textStyle.clone();
+        // set name label
+        let name = feature.get('names')[0]; // ignore alt names
+        _textStyle.getText().setText(name);
+        return [mainStyle, _textStyle];
+    };
+
+    // layer
     var mainLayer = new ol.layer.Vector({
         source: new ol.source.Vector(),
-        style: mainStyle,
+        style: [mainStyle,textStyle],
     });
 
     // data
@@ -354,7 +404,7 @@
         // layer
         let snapshotLayer = new ol.layer.Vector({
             source: new ol.source.Vector(),
-            style: mainStyle,
+            style: mainGetStyle,
         });
 
         // map
@@ -402,7 +452,7 @@
         // snapshot layer
         let snapshotLayer = new ol.layer.Vector({
             source: new ol.source.Vector(),
-            style: mainStyle,
+            style: mainGetStyle,
         });
 
         // map image layer

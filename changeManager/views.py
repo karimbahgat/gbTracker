@@ -280,7 +280,9 @@ def api_snapshots(request):
         feats = []
         for snap in snaps:
             geom = snap.geom.__geo_interface__
-            feat = {'type': 'Feature', 'properties': {}, 'geometry':geom}
+            names = [n.name for n in snap.boundary_ref.names.all()]
+            props = {'names':names}
+            feat = {'type': 'Feature', 'properties': props, 'geometry':geom}
             feats.append(feat)
         coll = {'type': 'FeatureCollection', 'features': feats}
         return JsonResponse(coll)
