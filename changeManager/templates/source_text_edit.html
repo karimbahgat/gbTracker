@@ -1,0 +1,36 @@
+{% extends "templates/base.html" %}
+
+{% load static %}
+
+{% block page_content %}
+
+<section>
+    <div class="content">
+        <header>
+            <div class="row">
+                <img height="30px" src="{% static 'images/text.png' %}">
+                <h2 style="text-align:left">
+                    Editing Text Source
+                </h2>
+            </div>
+            <p>
+                Some instructions here... 
+            </p>
+        </header>
+
+        <div>
+            <form method="POST" action="{% url 'textsource_edit' form.instance.pk %}">
+                {% csrf_token %}
+                <table>
+                    {{ form.as_table }}
+                </table>
+                <button style="float:right" type="submit">Submit</button>
+            </form>
+        </div>
+
+        <br><br>
+
+    </div>
+</section>
+
+{% endblock %}

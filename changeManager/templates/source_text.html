@@ -1,0 +1,74 @@
+{% extends "templates/base.html" %}
+
+{% load static %}
+
+{% block page_content %}
+
+<section>
+    <div class="content">
+        <header>
+            <a class="button" style="float:right" href="{% url 'textsource_edit' source.pk %}">Edit</a>
+            <h2 style="text-align:left">
+                Source: &nbsp;&nbsp;{{ source.name }}
+            </h2>
+            <p>
+                <span style="vertical-align:top">Type: 
+                Text <img height="20px" style="display:none" src="{% static 'changeManager/images/source.png' %}">
+                </span>
+
+                <br>
+
+                <span style="vertical-align:top">URL: 
+                <a href="{{ source.url }}">{{ source.url }}</a>
+                </span>
+
+                <br>
+
+                <span style="vertical-align:top">Valid from: 
+                {{ source.valid_from }}
+                </span>
+
+                <br>
+
+                <span style="vertical-align:top">Valid to: 
+                {{ source.valid_to }}
+                </span>
+
+                <br>
+            
+                <span style="vertical-align:top">Citation: 
+                {{ source.citation }}
+                </span>
+
+                <br>
+            
+                <span style="vertical-align:top">Source Note: 
+                {{ source.note }}
+                </span>
+
+            </p>
+        </header>
+
+        <br><br>
+
+        <div>
+
+            <style>
+                #id_title {
+                    width:60%
+                    }
+                #id_citation, #id_note, #id_url {
+                    width:98%
+                    }
+            </style>
+
+            <h3>
+                {{ toplevel_refs.count }} toplevel boundary definitions
+            </h3>
+
+        </div>
+
+    </div>
+</section>
+
+{% endblock %}

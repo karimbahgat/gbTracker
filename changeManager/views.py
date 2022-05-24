@@ -21,7 +21,7 @@ def source(request, pk):
     print('typ',src,repr(src.type))
     
     if src.type == 'TextSource':
-        raise NotImplementedError()
+        return render(request, 'source_text.html', context)
         
     elif src.type == 'DataSource':
         import_params = src.importer.import_params
@@ -79,6 +79,25 @@ def mapsource_add(request):
             else:
                 return render(request, 'source_map_add.html', {'form':form})
 
+def textsource_add(request):
+    if request.method == 'GET':
+        # create empty form
+        form = forms.BoundarySourceForm(initial={'type':'TextSource'})
+        context = {'form': form}
+        return render(request, 'source_text_add.html', context)
+
+    elif request.method == 'POST':
+        with transaction.atomic():
+            # save form data
+            data = request.POST
+            form = forms.BoundarySourceForm(data)
+            if form.is_valid():
+                form.save()
+                source = form.instance
+                return redirect('source', source.pk)
+            else:
+                return render(request, 'source_text_add.html', {'form':form})
+
 def datasource_edit(request, pk):
     '''Edit of a data source'''
     src = models.BoundarySource.objects.get(pk=pk)
@@ -127,6 +146,27 @@ def mapsource_edit(request, pk):
                 return redirect('source', src.pk)
             else:
                 return render(request, 'source_map_edit.html', {'form':form})
+
+def textsource_edit(request, pk):
+    '''Edit of a text source'''
+    src = models.BoundarySource.objects.get(pk=pk)
+
+    if request.method == 'GET':
+        # create empty form
+        form = forms.BoundarySourceForm(instance=src)
+        context = {'form': form}
+        return render(request, 'source_text_edit.html', context)
+
+    elif request.method == 'POST':
+        with transaction.atomic():
+            # save form data
+            data = request.POST
+            form = forms.BoundarySourceForm(data, instance=src)
+            if form.is_valid():
+                form.save()
+                return redirect('source', src.pk)
+            else:
+                return render(request, 'source_text_edit.html', {'form':form})
 
 def boundary(request, pk):
     '''View of a boundary ref instance.'''
