@@ -58,30 +58,65 @@
     #info-div ul li img {
         height: 25px;
     }
-    
-    #timeline-div {
+
+    .timespan {
+        position:absolute;
+        background-color:rgb(6,75,52); 
+        color: white;
+        border-radius:15px; 
+        padding:10px;
+        text-align:center;
+        transform:translate(-50%, -100%)%;
+        height:50px;
+        overflow:hidden;
+    }
+    .timespan-content {
+        display:flex; 
+        flex-direction:row; 
+        align-items:center; 
+        width:100%;
+    }
+    .timespan:hover {
+        cursor:pointer;
+    }
+    .timespan-current {
+        background-color:skyblue; 
+        color: white;
+        height:100%;
+    }
+    .timespan-filler {
+        color: white;
+        border-radius:15px; 
+        padding:10px;
+        height:50px;
+        overflow:hidden;
+    }
+    .timespan-label {
+        margin-right:5px; 
+        margin-left:5px;
+        vertical-align:middle; 
+        white-space:nowrap; 
+        overflow:hidden;
     }
 
-    .timeline-entry {
-        display: flex;
-        flex-direction: row;
-        gap: 20px;
-        width: 100%;
+    #date-labels-div {
+        width:100%; 
+        background-color:gray;
     }
 
-    .timeline-entry-date {
-        display: flex;
-        width: 100px;
-        height: 100px;
-        background-color: lightgray;
-        border-radius: 50%;
-        justify-content: center;
-        align-items: center;
+    .date-label {
+        position:absolute; 
+        width:fit-content; 
+        text-align:center; 
+        transform:translate(-50%, -100%);
     }
 
-    .timeline-entry-content {
-        min-height: 100px;
-        flex-grow: 1;
+    .date-label-line {
+        position:absolute;  
+        top:0%; 
+        height:100%; 
+        width:1px; 
+        background-color:rgb(200,200,200);
     }
 
 </style>
@@ -106,7 +141,7 @@
                     <ul>
                         <li class="row"><img src="{% static 'images/time.svg' %}"><h3><span id="timeperiod">XXXX-XXXX</span></h3></li>
                     </ul>
-                    <ul>
+                    <ul style="margin-left:15px">
                         <li class="row">Event 1</li>
                         <li class="row">Event 2</li>
                         <li class="row">Event 3</li>
@@ -119,14 +154,60 @@
                     </div>
                 </div>
             </div>
-
         </div>
+
     </div>
     
 </section>
 
 <section>
-    <h2>Change History</h2>
+
+    <div id="timeline">
+        <h2>Timeline</h2>
+        <div id="timeline-data" style="width:90%; min-height:80px; margin:5%; position:relative; background-color:whitesmoke; border:rgb(200,200,200) 1px solid">
+            <!-- tick date labels -->
+            <div class="date-labels-div">
+                {% for tick in ticks %}
+                <div class="date-label" style="left:{{ tick.percent }}%; right:{{ tick.percent }}%">{{ tick.label }}</div>
+                {% endfor %}
+            </div>
+
+            <!-- vertical lines at tick dates -->
+            {% for tick in ticks %}
+                <div style="left:{{ tick.percent }}%; right:{{ tick.percent }}%">
+                </div>
+            {% endfor %}
+
+            <!-- current time marking -->
+            <!--
+            {% for snap_match in snapshot_matches %}
+                {% if snap_match.pk == snapshot.pk %}
+                    <div class="timespan-current" style="position:absolute; top:0%; left:{{ snap_match.date_start_perc }}%; width:{{ snap_match.date_dur_perc }}%">
+                        <div style="color:rgb(189, 223, 236); width:100%; text-align:center; font-weight:bold; font-style:italic">CURRENT</div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+            -->
+
+            <!-- all event timespans -->
+            <br>
+            {% for event in events %}
+                <div class="timespan" style="left:{{ event.date_start_perc }}%; width:{{ event.date_dur_perc }}%" title="{{ event.date_start }} &rarr; {{ event.date_end }}">
+                    <div class="timespan-content">
+                        <img height="20px" src="{% static 'images/time.svg' %}" style="filter:invert(1); vertical-align:middle"/>
+                        <span class="timespan-label">
+                            Event info... 
+                        </span>
+                    </div>
+                </div>
+                <div class="timespan-filler">
+                    <!-- since timespans are absolute, need relative divs to fill up the height -->
+                </div>
+                <br>
+            {% endfor %}
+        </div>
+    </div>
+
 </section>
 
 <br><br>
@@ -228,7 +309,7 @@
 
 
 <script>
-    function dataInit() {
+    function getMapData() {
         queryString = window.location.search;
         queryString += '&model=changeManager.BoundarySnapshot';
         url = "{% url 'api_filter' %}" + queryString;
@@ -255,8 +336,83 @@
     };
 
     // init
-    dataInit();
+    getMapData();
 </script>
+
+
+
+<!--
+JAVASCRIPT VERSION TO POPULATE TIMELINE (NOT FINISHED)
+
+<script>
+    function getAllDates() {
+        urlParams = new URLSearchParams(window.location.search);
+        queryString = '?model=changeManager.Event';
+        for (key of urlParams.keys()) {
+            if (key.endsWith('_source')) {continue};
+            val = urlParams.get(key);
+            key = 'snapshots__' + key; // queries boundary refs of an event's snapshots
+            queryString += `&${key}=${val}`;
+        };
+        queryString += '&distinct=1'
+        url = "{% url 'api_filter' %}" + queryString;
+        console.log(url);
+        fetch(url).then(resp=>resp.json()).then(data=>datesInit(data));
+    };
+
+    function datesInit(data) {
+        console.log(data);
+        // set things
+        populateTimeline(data);
+    };
+
+    function populateTimeline(events) {
+        // turn into unique dates
+        dates = {};
+        for (event of events) {
+            dates[event.fields.date_start] = true;
+            dates[event.fields.date_end] = true;
+        };
+        dates = Object.keys(dates);
+        // find total span in ms
+        dates.sort();
+        minDateNum = Date.parse(dates[0]);
+        maxDateNum = Date.parse(dates[dates.length-1]);
+        dateSpanNum = maxDateNum - minDateNum;
+        // timeline
+        timelineDiv = document.getElementById('timeline-data');
+        // tick date labels
+        tickLabelsDiv = document.createElement('div');
+        tickLabelsDiv.id = 'date-labels-div';
+        function getTickPercent(date) {
+            num = Date.parse(date);
+            frac = (num - minDateNum) / dateSpanNum;
+            return frac * 100.0;
+        };
+        function getTicks(dates) {
+            dates.sort();
+            minDateNum = Date.parse(dates[0]);
+            maxDateNum = Date.parse(dates[dates.length-1]);
+            dateSpanNum = maxDateNum - minDateNum;
+            numTicks = 10;
+            dateIncr = dateSpanNum / numTicks;
+            for (let i=minDateNum; maxDateNum; i+dateIncr) {
+
+            }
+        }
+        for (event of events) {
+            label = document.createElement('div');
+            label.className = 'date-label';
+            label.style = `left:${perc}; right:${perc}`; // positions the label
+        };
+        timelineDiv.appendChild(tickLabelsDiv);
+
+    // init
+    getAllDates();
+</script>
+
+-->
+
 
 
 

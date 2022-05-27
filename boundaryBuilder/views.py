@@ -119,7 +119,57 @@ def build(request):
         If name diff is above some thresh, add namechange event. 
     '''
     if request.method == 'GET':
-        return render(request, 'build.html', {})
+        # modify get params to fetch events
+        params = request.GET.copy()
+        params = {'snapshots__'+key:val 
+                for key,val in request.GET.items()
+                if not key.endswith('_source')}
+        print(params)
+
+        # fetch events
+        events = models.Event.objects.filter(**params).distinct()
+        print(events)
+        from datetime import date
+        date_starts = [event.date_start for event in events]
+        date_ends = [event.date_end for event in events]
+
+        # calc current date (for now just setting to start of all events)
+        # used for ordering the events
+        date_start = date.fromisoformat(min(date_starts)).toordinal()
+        date_end = date.fromisoformat(min(date_starts)).toordinal()
+
+        # calc event date percents and sort
+        mindate_num = date.fromisoformat(min(date_starts)).toordinal()
+        maxdate_num = date.fromisoformat(max(date_ends)).toordinal()
+        for event in events: 
+            start = date.fromisoformat(event.date_start).toordinal()
+            end = date.fromisoformat(event.date_end).toordinal()
+            event.date_start_perc = (start - mindate_num) / (maxdate_num - mindate_num) * 100
+            event.date_end_perc = (end - mindate_num) / (maxdate_num - mindate_num) * 100
+            event.date_dur_perc = event.date_end_perc - event.date_start_perc
+            mid = (start + end) / 2.0
+            event.date_dist = min(abs(date_start-mid), abs(date_end-mid))
+        key = lambda e: e.date_dist
+        events = sorted(events, key=key)
+
+        # calc tick labels
+        ticks = []
+        numticks = 5
+        incr = (maxdate_num - mindate_num) / (numticks-1)
+        cur = mindate_num
+        while cur <= maxdate_num:
+            print(cur)
+            perc = (cur - mindate_num) / (maxdate_num - mindate_num) * 100
+            ticks.append({'label':date.fromordinal(int(cur)), 'percent':perc})
+            cur += incr
+        print(ticks)
+
+        # return
+        context = {'ticks':ticks, 'events':events}
+        print(context)
+        return render(request, 'build.html', context)
+
+
 
         # initial anchor points (snapshot ids) chosen
         # display original snapshot including prev/next snapshots/changes
@@ -167,14 +217,13 @@ class CustomSerializer(PythonSerializer):
 
     def handle_fk_field(self, obj, field):
         '''Recursively serialize all foreign key fields'''
-        #value = self._value_from_field(obj, field)
         fk_obj = getattr(obj, field.name)
-        print('obj',obj,'fk_obj',fk_obj)
+        #print('obj',obj,'fk_obj',fk_obj)
         if fk_obj is not None:
             value = CustomSerializer().serialize([fk_obj])[0] # should only be one for foreign keys
         else:
             value = fk_obj # None
-        print('value',value)
+        #print('value',value)
         #print('fk obj',obj,'field',repr(field),'value',value)
         self._current[field.name] = value
 
@@ -200,9 +249,14 @@ def api_filter(request):
     # get model
     model_name = params.pop('model')
     model = apps.get_model(model_name)
+    # get non-filter values
+    distinct = params.pop('distinct', False)
     # filter results
     results = model.objects.filter(**params)
     print(results.count(), results)
+    # post processing
+    if distinct:
+        results = results.distinct()
     # serialize to python
     serialized = CustomSerializer().serialize(queryset=results)
     #print(repr(serialized))
