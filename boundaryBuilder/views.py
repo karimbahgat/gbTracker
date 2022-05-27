@@ -4,6 +4,10 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.forms.models import model_to_dict
 from django.db.models import Min, Max
+from django.apps import apps
+from django.core import serializers
+from django.core.serializers.python import Serializer as PythonSerializer
+from django.core.serializers.json import DjangoJSONEncoder
 
 from changeManager import models
 
@@ -115,6 +119,8 @@ def build(request):
         If name diff is above some thresh, add namechange event. 
     '''
     if request.method == 'GET':
+        return render(request, 'build.html', {})
+
         # initial anchor points (snapshot ids) chosen
         # display original snapshot including prev/next snapshots/changes
         snapshot_ids = request.GET['anchors']
@@ -149,6 +155,59 @@ def build(request):
         fdsfs
 
 # API
+
+class CustomJSONEncoder(DjangoJSONEncoder):
+    def default(self, obj):
+        if hasattr(obj, '__geo_interface__'):
+            return obj.__geo_interface__
+        return super().default(obj)
+
+class CustomSerializer(PythonSerializer):
+    internal_use_only = False
+
+    def handle_fk_field(self, obj, field):
+        '''Recursively serialize all foreign key fields'''
+        #value = self._value_from_field(obj, field)
+        fk_obj = getattr(obj, field.name)
+        print('obj',obj,'fk_obj',fk_obj)
+        if fk_obj is not None:
+            value = CustomSerializer().serialize([fk_obj])[0] # should only be one for foreign keys
+        else:
+            value = fk_obj # None
+        print('value',value)
+        #print('fk obj',obj,'field',repr(field),'value',value)
+        self._current[field.name] = value
+
+    def handle_m2m_field(self, obj, field):
+        '''Recursively serialize all many2many fields'''
+        if field.remote_field.through._meta.auto_created:
+            def m2m_value(value):
+                return CustomSerializer().serialize([value])[0] # should only be one
+            m2m_iter = getattr(obj, '_prefetched_objects_cache', {}).get(
+                field.name,
+                getattr(obj, field.name).iterator(),
+            )
+            self._current[field.name] = [m2m_value(related) for related in m2m_iter]
+
+
+@csrf_exempt
+def api_filter(request):
+    '''Generic api for fetching any model with any filter kwargs'''
+    # parse parameters
+    params = request.GET.copy()
+    print(params)
+    params = {key:params.get(key) for key in params.keys()} # each value is wrapped in a list
+    # get model
+    model_name = params.pop('model')
+    model = apps.get_model(model_name)
+    # filter results
+    results = model.objects.filter(**params)
+    print(results.count(), results)
+    # serialize to python
+    serialized = CustomSerializer().serialize(queryset=results)
+    #print(repr(serialized))
+    # return
+    return JsonResponse(serialized, safe=False, encoder=CustomJSONEncoder)
 
 @csrf_exempt
 def api_suggest_previous_changes(request):

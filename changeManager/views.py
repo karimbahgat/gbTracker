@@ -12,6 +12,11 @@ import json
 
 # Create your views here.
 
+def overview(request):
+    if request.method == 'GET':
+        context = {'names':request.GET['names'].split('|')}
+        return render(request, 'overview.html', context)
+
 def source(request, pk):
     '''View of a source'''
     src = models.BoundarySource.objects.get(pk=pk)

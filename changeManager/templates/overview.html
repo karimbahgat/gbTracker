@@ -39,7 +39,7 @@
     }
 
     #sidepanel {
-        width:100%;
+        width:50%;
         height:400px;
     }
     #info-div {
@@ -90,7 +90,7 @@
     <div class="content">
         <header>
             <div id="queries-div">
-                <h2>Build-Your-Own-Boundary: </h2>
+                <h2>Boundary Sources: </h2>
                 {% for name in names %}
                     <h3 class="query">{{ name }}</h3>
                 {% endfor %}
@@ -105,18 +105,11 @@
                 <div id="info-div" class="box">
                     <ul>
                         <li class="row"><img src="{% static 'images/time.svg' %}"><h3><span id="timeperiod">XXXX-XXXX</span></h3></li>
+                        <li class="row"><img src="{% static 'images/dataset.png' %}"><h3><span id="dataset_count">...</span> Datasets</h3></li>
+                        <li class="row"><img src="{% static 'images/map.png' %}"><h3><span id="map_count">...</span> Maps</h3></li>
+                        <li class="row"><img src="{% static 'images/text.png' %}"><h3 ><span id="text_count">...</span> Texts</h3></li>
                     </ul>
-                    <ul>
-                        <li class="row">Event 1</li>
-                        <li class="row">Event 2</li>
-                        <li class="row">Event 3</li>
-                        <li class="row">...</li>
-                    </ul>
-                    <br><br><br>
-                    <div style="display:flex; flex-direction:row; width:100%; justify-content:space-between">
-                        <button>Previous</button>
-                        <button>Next</button>
-                    </div>
+                    <button>Build your boundary now</button>
                 </div>
             </div>
 
@@ -124,12 +117,6 @@
     </div>
     
 </section>
-
-<section>
-    <h2>Change History</h2>
-</section>
-
-<br><br>
 
 <script>
     /////////////
@@ -189,7 +176,7 @@
     function mainGetStyle(feature) {
         let _textStyle = textStyle.clone();
         // set name label
-        let name = feature.get('fields').names[0].fields.name; // ignore alt names
+        let name = feature.get('names')[0]; // ignore alt names
         _textStyle.getText().setText(name);
         return [mainStyle, _textStyle];
     };
@@ -197,8 +184,15 @@
     // layer
     var mainLayer = new ol.layer.Vector({
         source: new ol.source.Vector(),
-        style: mainGetStyle,
+        style: [mainStyle,textStyle],
     });
+
+    // data
+    mainGeojsonData = ''; //{{ main_geojson|safe }};
+    if (mainGeojsonData) {
+        feat = new ol.format.GeoJSON().readFeature(mainGeojsonData, {dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857'});
+        mainLayer.getSource().addFeature(feat);
+    };
 
     // map
     var map = new ol.Map({
@@ -223,39 +217,10 @@
         })
     });
 
-</script>
-
-
-
-<script>
-    function dataInit() {
-        queryString = window.location.search;
-        queryString += '&model=changeManager.BoundarySnapshot';
-        url = "{% url 'api_filter' %}" + queryString;
-        console.log(url)
-        fetch(url).then(resp=>resp.json()).then(data=>mapInit(data));
-    };
-
-    function boundaryReferenceToProperties(boundaryRef) {
-        return boundaryRef;
-    };
-
-    function mapInit(data) {
-        console.log(data)
-        coll = {type:'FeatureCollection', features:[]}
-        for (snap of data) {
-            geom = snap.fields.geom;
-            props = boundaryReferenceToProperties(snap.fields.boundary_ref);
-            feat = {type:'Feature', geometry:geom, properties:props};
-            coll.features.push(feat);
-        };
-        feats = new ol.format.GeoJSON().readFeatures(coll, {dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857'});
-        mainLayer.getSource().addFeatures(feats);
+    if (mainGeojsonData) {
         map.getView().fit(mainLayer.getSource().getExtent());
     };
 
-    // init
-    dataInit();
 </script>
 
 
@@ -484,5 +449,81 @@
 
 </script>
 -->
+
+<!-- Getting involved -->
+<style>
+    .row-feature {
+        display:flex;
+        flex-direction:row;
+        align-items:top;
+        margin-bottom:40px;
+    }
+    .row-feature-icon {
+    }
+    .row-feature-icon img {
+        height:200px;
+        width:200px;
+        border-radius:50%;
+    }
+    .row-feature-content {
+        margin:10px;
+    }
+</style>
+
+<section>
+    <header class="major">
+        <h2 id="getting-involved">Evidence</h2>
+    </header>
+    <div>
+        <div class="row-feature">
+            <div class="row-feature-icon">
+                <img src="https://squarecircles.com/wp-content/uploads/2018/10/rowofbooks.jpg"/>
+            </div>
+            <div class="row-feature-content">
+                <h3>Register a change event</h3>
+                <p>
+                    In some cases, we may not know the exact depiction of what a boundary 
+                    looked like, but perhaps we have a <b>text-based source</b> telling us that
+                    on some date a boundary underwent a change, like <b>changed its name, 
+                    split up, or merged</b> with another boundary. By combining this information
+                    with other data points, we can reconstruct the boundary delineation before or 
+                    after the reported change.
+                </p>
+                <a href="" class="button big">Add now</a>
+            </div>
+        </div>
+        <div class="row-feature">
+            <div class="row-feature-icon">
+                <img src="{% static 'images/boundarydata.png' %}"/>
+            </div>
+            <div class="row-feature-content">
+                <h3>Upload boundary data</h3>
+                <p>
+                    Uploading boundary data and associated temporal metadata 
+                    helps by providing an "anchor point" or a <b>snapshot</b> of what a set of
+                    boundaries looked like <b>at a given point in time</b>. This is useful
+                    to reconstruct how boundaries have changed over time. 
+                </p>
+                <a href="{% url 'datasets' %}" class="button big">Upload now</a>
+            </div>
+        </div>
+        <div class="row-feature">
+            <div class="row-feature-icon">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/C%C3%B4te_d%27Ivoire_Map.jpg/602px-C%C3%B4te_d%27Ivoire_Map.jpg"/>
+            </div>
+            <div class="row-feature-content">
+                <h3>Digitize from map data</h3>
+                <p>
+                    If boundary data is not available, additional information can be sought from
+                    maps that depict country boundary outlines at a particular point in time. 
+                    Digitizing or extracting <b>map boundary outlines</b> helps to turn this information
+                    into useful boundary snapshots. 
+                </p>
+                <a href="{% url 'mapsource_add' %}" class="button big">Digitize now</a>
+            </div>
+        </div>
+    </div>
+</section>
+
 
 {% endblock %}
