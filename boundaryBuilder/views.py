@@ -135,8 +135,7 @@ def build(request):
 
         # calc current date (for now just setting to start of all events)
         # used for ordering the events
-        date_start = date.fromisoformat(min(date_starts)).toordinal()
-        date_end = date.fromisoformat(min(date_starts)).toordinal()
+        date_now = date.fromisoformat(min(date_starts)).toordinal()
 
         # calc event date percents and sort
         mindate_num = date.fromisoformat(min(date_starts)).toordinal()
@@ -148,7 +147,7 @@ def build(request):
             event.date_end_perc = (end - mindate_num) / (maxdate_num - mindate_num) * 100
             event.date_dur_perc = event.date_end_perc - event.date_start_perc
             mid = (start + end) / 2.0
-            event.date_dist = min(abs(date_start-mid), abs(date_end-mid))
+            event.date_dist = abs(date_now-mid)
         key = lambda e: e.date_dist
         events = sorted(events, key=key)
 

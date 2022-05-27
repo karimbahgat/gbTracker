@@ -99,6 +99,22 @@
         overflow:hidden;
     }
 
+    #current-date {
+        position:absolute; 
+        top:0%; 
+        width:5px;
+        height:100%;
+    }
+
+    #current-date-content {
+        background-color:rgb(189, 223, 236); 
+        width:100%; 
+        height:100%;
+        text-align:center; 
+        font-weight:bold; 
+        font-style:italic;
+    }
+
     #date-labels-div {
         width:100%; 
         background-color:gray;
@@ -138,19 +154,18 @@
             </div>
             <div id="sidepanel">
                 <div id="info-div" class="box">
-                    <ul>
-                        <li class="row"><img src="{% static 'images/time.svg' %}"><h3><span id="timeperiod">XXXX-XXXX</span></h3></li>
-                    </ul>
-                    <ul style="margin-left:15px">
-                        <li class="row">Event 1</li>
-                        <li class="row">Event 2</li>
-                        <li class="row">Event 3</li>
-                        <li class="row">...</li>
-                    </ul>
-                    <br><br><br>
+                    <div class="row"><img height="30px" src="{% static 'images/time.svg' %}"><h3><span id="timeperiod">XXXX-XX-XX</span></h3></div>
+                    <div style="margin-left:15px; height:79%; overflow:auto">
+                        <ul>
+                            <li class="row">Event 1</li>
+                            <li class="row">Event 2</li>
+                            <li class="row">Event 3</li>
+                            <li class="row">...</li>
+                        </ul>
+                    </div>
                     <div style="display:flex; flex-direction:row; width:100%; justify-content:space-between">
-                        <button>Previous</button>
-                        <button>Next</button>
+                        <button id="prev-button" onclick="prevDate()">Previous</button>
+                        <button id="next-button" onclick="nextDate()">Next</button>
                     </div>
                 </div>
             </div>
@@ -178,16 +193,10 @@
                 </div>
             {% endfor %}
 
-            <!-- current time marking -->
-            <!--
-            {% for snap_match in snapshot_matches %}
-                {% if snap_match.pk == snapshot.pk %}
-                    <div class="timespan-current" style="position:absolute; top:0%; left:{{ snap_match.date_start_perc }}%; width:{{ snap_match.date_dur_perc }}%">
-                        <div style="color:rgb(189, 223, 236); width:100%; text-align:center; font-weight:bold; font-style:italic">CURRENT</div>
-                    </div>
-                {% endif %}
-            {% endfor %}
-            -->
+            <!-- current time marking (needs to be set with left=...) -->
+            <div id="current-date">
+                <div id="current-date-content">CURRENT</div>
+            </div>
 
             <!-- all event timespans -->
             <br>
@@ -337,6 +346,111 @@
 
     // init
     getMapData();
+</script>
+
+
+
+<script>
+    // boundary comparison stuff
+    function getSnapshotsAtDate(date) {
+        // define url
+        urlParams = new URLSearchParams(window.location.search);
+        queryString = '?model=changeManager.BoundarySnapshot';
+        for (key of urlParams.keys()) {
+            if (key.endsWith('_source')) {continue};
+            val = urlParams.get(key);
+            queryString += `&${key}=${val}`;
+        };
+        queryString += '&event__date_start__lte='+date;
+        queryString += '&event__date_end__gte='+date;
+        url = "{% url 'api_filter' %}" + queryString;
+        console.log(url);
+        // get snapshots
+        fetch(url).then(resp=>resp.json()).then(data=>boundaryCompare(data));
+    };
+
+    // comparisons
+    function boundaryCompare(data) {
+        console.log(data);
+    };
+</script>
+
+
+
+<script>
+    // save all events for future use
+    events = [];
+    {% for event in events %}
+        event = {};
+        event['date_start'] = "{{ event.date_start }}";
+        event['date_end'] = "{{ event.date_end }}";
+        events.push(event);
+    {% endfor %}
+
+    // turn into unique dates
+    dates = {};
+    for (event of events) {
+        dates[event.date_start] = true;
+        dates[event.date_end] = true;
+    };
+    dates = Object.keys(dates);
+
+    // find total span in ms
+    dates.sort();
+    minDateNum = Date.parse(dates[0]);
+    maxDateNum = Date.parse(dates[dates.length-1]);
+    dateSpanNum = maxDateNum - minDateNum;
+    
+    // function to convert dates to percent
+    function getDatePercent(date) {
+        num = Date.parse(date);
+        frac = (num - minDateNum) / dateSpanNum;
+        return frac * 100.0;
+    };
+
+    // functions to set dates
+    currentDateIndex = 0;
+    
+    function setCurrentDate(date) {
+        perc = getDatePercent(date);
+        document.getElementById('current-date').style.left = perc + '%';
+        document.getElementById('timeperiod').innerText = date;
+        updateNavButtons(date);
+        getSnapshotsAtDate(date);
+    };
+
+    function prevDate() {
+        currentDateIndex -= 1;
+        date = dates[currentDateIndex];
+        setCurrentDate(date);
+    };
+
+    function nextDate() {
+        currentDateIndex += 1;
+        date = dates[currentDateIndex];
+        setCurrentDate(date);
+    };
+
+    // function to update navigation buttons
+    function updateNavButtons(currentDate) {
+        prevBut = document.getElementById('prev-button');
+        nextBut = document.getElementById('next-button');
+        // enable/disable previous button
+        if (currentDate == dates[0]) {
+            prevBut.disabled = true;
+        } else {
+            prevBut.disabled = false;
+        };
+        // enable/disable next button
+        if (currentDate == dates[dates.length-1]) {
+            nextBut.disabled = true;
+        } else {
+            nextBut.disabled = false;
+        };
+    };
+
+    // init current date
+    setCurrentDate(events[currentDateIndex]['date_start'])
 </script>
 
 
