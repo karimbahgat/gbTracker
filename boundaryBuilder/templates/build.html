@@ -7,6 +7,9 @@
 <script src="{% static 'js/ol.js' %}"></script>
 <link rel="stylesheet" href="{% static 'css/ol.css' %}" type="text/css">
 
+<script src="{% static 'boundaryBuilder/js/internalSpatial.js' %}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
+
 <style>
     #main-section {
         display:flex;
@@ -264,6 +267,27 @@
         })
     });
 
+    var comparisonStyle = new ol.style.Style({
+        fill: new ol.style.Fill({
+            color: 'rgba(255, 255, 255, 0)', // fully transparent
+        }),
+        stroke: new ol.style.Stroke({
+            color: 'rgba(0, 155, 0, 0.8)',
+            width: 1.5,
+            lineDash: [10,10]
+        }),
+    });
+
+    var highlightStyle = new ol.style.Style({
+        fill: new ol.style.Fill({
+            color: 'rgba(255, 0, 0, 0.5)',
+        }),
+        stroke: new ol.style.Stroke({
+            color: 'rgba(255, 0, 0, 1)',
+            width: 3
+        }),
+    });
+
     var textStyle = new ol.style.Style({
         text: new ol.style.Text({
             font:'15px sans-serif',
@@ -290,6 +314,16 @@
         style: mainGetStyle,
     });
 
+    var comparisonLayer = new ol.layer.Vector({
+        source: new ol.source.Vector(),
+        style: comparisonStyle,
+    });
+
+    var highlightLayer = new ol.layer.Vector({
+        source: new ol.source.Vector(),
+        style: highlightStyle,
+    });
+
     // map
     var map = new ol.Map({
         target: 'map',
@@ -305,7 +339,9 @@
                 maxZoom: 20,
                 crossOrigin: 'anonymous' // necessary for converting map to img during pdf generation: https://stackoverflow.com/questions/66671183/how-to-export-map-image-in-openlayer-6-without-cors-problems-tainted-canvas-iss
             })}),
-            mainLayer
+            mainLayer,
+            comparisonLayer,
+            highlightLayer
         ],
         view: new ol.View({
             center: ol.proj.fromLonLat([0,0]),
@@ -330,16 +366,27 @@
         return boundaryRef;
     };
 
-    function mapInit(data) {
-        console.log(data)
+    function snapshotsToGeoJSON(data) {
         coll = {type:'FeatureCollection', features:[]}
         for (snap of data) {
             geom = snap.fields.geom;
             props = boundaryReferenceToProperties(snap.fields.boundary_ref);
-            feat = {type:'Feature', geometry:geom, properties:props};
+            feat = {type:'Feature', geometry:geom, properties:props, id:props.pk};
             coll.features.push(feat);
         };
+        return coll;
+    };
+
+    function GeoJSONToFeatures(coll) {
         feats = new ol.format.GeoJSON().readFeatures(coll, {dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857'});
+        return feats;
+    };
+
+    function mapInit(data) {
+        console.log(data)
+        coll = snapshotsToGeoJSON(data);
+        window.mainData = coll;
+        feats = GeoJSONToFeatures(coll);
         mainLayer.getSource().addFeatures(feats);
         map.getView().fit(mainLayer.getSource().getExtent());
     };
@@ -365,13 +412,71 @@
         queryString += '&event__date_end__gte='+date;
         url = "{% url 'api_filter' %}" + queryString;
         console.log(url);
+        // init loading lock
+        loadingLock();
         // get snapshots
-        fetch(url).then(resp=>resp.json()).then(data=>boundaryCompare(data));
+        fetch(url).then(resp=>resp.json()).then(data=>snapshotsLoaded(data));
+    };
+
+    function snapshotsLoaded(data) {
+        coll = snapshotsToGeoJSON(data);
+        setComparisonLayer(coll);
+        boundaryCompare(coll);
+        updateNavButtons(dates[currentDateIndex]);
+    };
+
+    function loadingLock() {
+        document.getElementById('prev-button').disabled = true;
+        document.getElementById('next-button').disabled = true;
+    };
+
+    function setComparisonLayer(coll) {
+        comparisonLayer.getSource().clear();
+        feats = GeoJSONToFeatures(coll);
+        comparisonLayer.getSource().addFeatures(feats);
     };
 
     // comparisons
-    function boundaryCompare(data) {
-        console.log(data);
+    function boundaryCompare(coll) {
+        console.log(coll);
+        data1 = JSON.stringify(window.mainData);
+        data2 = JSON.stringify(coll);
+        calcAllSpatialRelations(data1, data2, onSuccess=onMatchesFound);
+    };
+
+    function onMatchesFound(results) {
+        [feats1,feats2,matches] = results;
+        bestMatches = calcBestMatches(matches);
+        //console.log(bestMatches);
+        // loop and process only those below x similarity
+        highlightLayer.getSource().clear();
+        for ([f1,f2,stats] of bestMatches) {
+            if (stats.equality < 0.95) {
+                console.log(stats);
+                console.log(f2);
+                // get features
+                feat1 = mainLayer.getSource().getFeatureById(f1.properties.pk);
+                feat2 = comparisonLayer.getSource().getFeatureById(f2.properties.pk);
+                // calc diff
+                try {
+                    diff = geomDifference(feat1, feat2);
+                } catch(err) {
+                    console.log('geometry error: '+err);
+                    continue;
+                };
+                if (diff == null) {
+                    continue;
+                };
+                // add to map
+                feat = new ol.format.GeoJSON().readFeature(diff);
+                highlightLayer.getSource().addFeature(feat);
+            };
+        };
+    };
+
+    function addSuggestedChanges() {
+        // add list of each detected change event in the right panel
+        sdafaf
     };
 </script>
 

@@ -138,6 +138,7 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
     BASE_DIR / 'changeManager' / 'static',
+    BASE_DIR / 'boundaryBuilder' / 'static',
 ]
 
 # Default primary key field type
