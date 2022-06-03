@@ -138,6 +138,39 @@
         background-color:rgb(200,200,200);
     }
 
+    /* changes */
+    .change-list {
+        margin: 0px;
+    }
+
+    .change-entry {
+        width: 97%;
+        display: flex;
+        flex-direction: row;
+        margin: 5px;
+    }
+
+    .change-type {
+        width: 20%;
+        background-color: #F0B323;
+        color: white;
+        border-radius: 5px;
+        padding: 3px;
+    }
+
+    .change-from {
+        width: 40%;
+        background-color: lightgray;
+        border-radius: 5px;
+        padding: 3px;
+    }
+    .change-to {
+        width: 40%;
+        background-color: lightgray;
+        border-radius: 5px;
+        padding: 3px;
+    }
+
 </style>
 
 <section>
@@ -158,13 +191,24 @@
             <div id="sidepanel">
                 <div id="info-div" class="box">
                     <div class="row"><img height="30px" src="{% static 'images/time.svg' %}"><h3><span id="timeperiod">XXXX-XX-XX</span></h3></div>
-                    <div style="margin-left:15px; height:79%; overflow:auto">
-                        <ul>
-                            <li class="row">Event 1</li>
-                            <li class="row">Event 2</li>
-                            <li class="row">Event 3</li>
-                            <li class="row">...</li>
-                        </ul>
+                    <div id="events-div" style="margin-left:0px; height:79%; overflow:auto">
+                        Initializing... 
+                        <!--
+                        <div class="change-list">
+                            <div class="change-entry">
+                                <span class="change-type">Transfer</span>
+                                <span class="change-from">From</span>
+                                <span class="change-to">To</span>
+                                <span><button class="button small">Show</button></span>
+                            </div>
+                            <div class="change-entry">
+                                <span class="change-type">Transfer</span>
+                                <span class="change-from">From</span>
+                                <span class="change-to">To</span>
+                                <span><button class="button small">Show</button></span>
+                            </div>
+                        </div>
+                        -->
                     </div>
                     <div style="display:flex; flex-direction:row; width:100%; justify-content:space-between">
                         <button id="prev-button" onclick="prevDate()">Previous</button>
@@ -176,13 +220,8 @@
 
     </div>
     
-</section>
-
-<section>
-
     <div id="timeline">
-        <h2>Timeline</h2>
-        <div id="timeline-data" style="width:90%; min-height:80px; margin:5%; position:relative; background-color:whitesmoke; border:rgb(200,200,200) 1px solid">
+        <div id="timeline-data" style="width:93%; min-height:80px; margin:6% 3.5%; position:relative; background-color:whitesmoke; border:rgb(200,200,200) 1px solid">
             <!-- tick date labels -->
             <div class="date-labels-div">
                 {% for tick in ticks %}
@@ -449,11 +488,18 @@
         bestMatches = calcBestMatches(matches);
         //console.log(bestMatches);
         // loop and process only those below x similarity
+        changeData = [];
         highlightLayer.getSource().clear();
         for ([f1,f2,stats] of bestMatches) {
             if (stats.equality < 0.95) {
                 console.log(stats);
                 console.log(f2);
+                // determine change entry
+                changeType = 'Transfer';
+                entry = {type:changeType,
+                        from:f1.properties,
+                        to:f2.properties};
+                changeData.push(entry);
                 // get features
                 feat1 = mainLayer.getSource().getFeatureById(f1.properties.pk);
                 feat2 = comparisonLayer.getSource().getFeatureById(f2.properties.pk);
@@ -472,11 +518,69 @@
                 highlightLayer.getSource().addFeature(feat);
             };
         };
+        // show changes in list
+        addSuggestedChanges(changeData);
     };
 
-    function addSuggestedChanges() {
+    function zoomToFeat(lyr, id) {
+        feat = lyr.getSource().getFeatureById(id);
+        map.getView().fit(feat.getGeometry().getExtent(),
+                          {'duration':500, 'padding':[10,10,10,10]}
+        );
+    };
+
+    function addSuggestedChanges(changeData) {
         // add list of each detected change event in the right panel
-        sdafaf
+        div = document.getElementById('events-div');
+        div.innerHTML = ''; // clear out
+        if (changeData.length == 0) {
+            div.innerHTML = 'No changes detected for this date';
+        } else {
+            // add header
+            div.innerHTML = `
+            <div class="row">
+                <span style="width:20%">Type</span>
+                <span style="width:40%">From</span>
+                <span style="width:40%">To</span>
+            </div>
+            `
+        };
+        // loop
+        changeEntries = document.createElement('div');
+        changeEntries.className = 'change-list';
+        div.appendChild(changeEntries);
+        for (change of changeData) {
+            console.log(change);
+            // entry
+            entry = document.createElement('div');
+            entry.className = 'change-entry';
+            changeEntries.appendChild(entry);
+            // type
+            obj = document.createElement('span');
+            obj.className = 'change-type';
+            obj.innerText = change.type;
+            entry.appendChild(obj);
+            // from
+            obj = document.createElement('span');
+            obj.className = 'change-from';
+            obj.innerText = change.from.fields.names[0].fields.name;
+            entry.appendChild(obj);
+            // to
+            obj = document.createElement('span');
+            obj.className = 'change-to';
+            obj.innerText = change.to.fields.names[0].fields.name;
+            entry.appendChild(obj);
+            // buttons div
+            obj = document.createElement('div');
+            entry.appendChild(obj);
+            // zoom button
+            obj = document.createElement('button');
+            obj.className = 'button small';
+            obj.innerText = 'Show';
+            let id = change.from.pk;
+            obj.onclick = function() {zoomToFeat(mainLayer, id)};
+            entry.appendChild(obj);
+        };
     };
 </script>
 
