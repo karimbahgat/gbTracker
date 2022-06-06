@@ -242,12 +242,6 @@
                                 <span class="change-to">To</span>
                                 <span><button class="button small">Show</button></span>
                             </div>
-                            <div class="change-entry">
-                                <span class="change-type">Transfer</span>
-                                <span class="change-from">From</span>
-                                <span class="change-to">To</span>
-                                <span><button class="button small">Show</button></span>
-                            </div>
                         </div>
                         -->
                     </div>
@@ -533,6 +527,7 @@
 
     // comparisons
     function boundaryCompare(coll) {
+        // this is the main boundary comparison procedure
         console.log(coll);
         data1 = JSON.stringify(window.mainData);
         data2 = JSON.stringify(coll);
@@ -560,32 +555,16 @@
         //calcAllSpatialRelations(data1, data2, onSuccess=onMatchesFound);
     };
 
-    function onMatchesFinished() {
-        let div = document.getElementById('events-div');
-        let status = document.getElementById('events-status');
-        console.log('div innerhtml')
-        console.log(div.innerHTML)
-        if (div.innerHTML == '') {
-            // no changes detected
-            console.log('should show no changes...')
-            status.innerText = 'No changes detected for this date';
-        } else {
-            // loading finished and succeded
-            status.innerText = ''; 
-        };
-        // turn back on nav buttons
-        updateNavButtons(dates[currentDateIndex]);
-    };
-
     function onMatchesFound(i, total, f1, related) {
         // this processes all feat2 matches found for one particular feat1
         console.log(`${i} of ${total} processed`);
         console.log(f1);
         // sort by equality
-        related = sortSpatialRelations(related, 'equality', 0.05);
+        related = sortSpatialRelations(related, 'equality', 0.0);
         // add to fromChangeData
         entries = [];
         for ([f2,stats] of related) {
+            if (stats.within < 0.05) { continue }
             console.log(stats);
             console.log(f2);
             // determine change entry
@@ -603,6 +582,21 @@
         if (entries.length > 1) {
             addFromChangesTable(f1, entries);
         };
+    };
+
+    function onMatchesFinished() {
+        let div = document.getElementById('events-div');
+        let status = document.getElementById('events-status');
+        if (div.innerHTML == '') {
+            // no changes detected
+            console.log('no changes...')
+            status.innerText = 'No changes detected for this date';
+        } else {
+            // loading finished and succeded
+            status.innerText = ''; 
+        };
+        // turn back on nav buttons
+        updateNavButtons(dates[currentDateIndex]);
     };
 
     function showFromMatchGroup(id) {
@@ -635,86 +629,6 @@
         // zoom
         zoomToFeat(mainLayer, id);
     };
-
-    /*
-    function onMatchesFoundOLD(results) {
-        [feats1,feats2,matches] = results;
-        bestMatches = calcBestMatches(matches);
-        //console.log(bestMatches);
-        // loop and process only those below x similarity
-        changeData = [];
-        highlightLayer.getSource().clear();
-        for ([f1,related] of matches) {
-            console.log('---');
-            console.log(f1);
-            related = sortSpatialRelations(related, 'equality', 0.01);
-            // only process if best match < 0.95
-            //if (related[0]['equality'] >= 0.95) { continue }; // almost no change
-            // loop
-            for ([f2,stats] of related.slice(1)) {
-                console.log(stats);
-                console.log(f2);
-                // determine change entry
-                changeType = 'Transfer';
-                entry = {type:changeType,
-                        from:f1.properties,
-                        to:f2.properties,
-                        id:changeData.length+1,
-                        };
-                changeData.push(entry);
-                console.log(entry);
-                // get features
-                feat1 = mainLayer.getSource().getFeatureById(f1.properties.pk);
-                feat2 = comparisonLayer.getSource().getFeatureById(f2.properties.pk);
-                // calc diff
-                try {
-                    isec = geomIntersection(feat1, feat2);
-                } catch(err) {
-                    console.log('geometry error: '+err);
-                    continue;
-                };
-                if (isec == null) {
-                    continue;
-                };
-                // add to map
-                feat = new ol.format.GeoJSON().readFeature(isec);
-                feat.setId(entry.id);
-                highlightLayer.getSource().addFeature(feat);
-            };
-        };
-        /*
-        for ([f1,f2,stats] of bestMatches) {
-            if (stats.equality < 0.95) {
-                console.log(stats);
-                console.log(f2);
-                // determine change entry
-                changeType = 'Transfer';
-                entry = {type:changeType,
-                        from:f1.properties,
-                        to:f2.properties};
-                changeData.push(entry);
-                // get features
-                feat1 = mainLayer.getSource().getFeatureById(f1.properties.pk);
-                feat2 = comparisonLayer.getSource().getFeatureById(f2.properties.pk);
-                // calc diff
-                try {
-                    diff = geomDifference(feat1, feat2);
-                } catch(err) {
-                    console.log('geometry error: '+err);
-                    continue;
-                };
-                if (diff == null) {
-                    continue;
-                };
-                // add to map
-                feat = new ol.format.GeoJSON().readFeature(diff);
-                highlightLayer.getSource().addFeature(feat);
-            };
-        };
-        // show changes in list
-        addSuggestedChanges(changeData);
-    };
-    */
 
     function zoomToFeat(lyr, id) {
         feat = lyr.getSource().getFeatureById(id);
@@ -776,60 +690,6 @@
         // group separator
         obj = document.createElement('br');
         groupDiv.appendChild(obj);
-    };
-
-    function addSuggestedChangesOLD(changeData) {
-        // add list of each detected change event in the right panel
-        div = document.getElementById('events-div');
-        div.innerHTML = ''; // clear out
-        if (changeData.length == 0) {
-            div.innerHTML = 'No changes detected for this date';
-        } else {
-            // add header
-            div.innerHTML = `
-            <div class="row" style="width:95%">
-                <span style="width:20%">Type</span>
-                <span style="width:40%">From</span>
-                <span style="width:40%">To</span>
-            </div>
-            `
-        };
-        // loop
-        changeEntries = document.createElement('div');
-        changeEntries.className = 'change-list';
-        div.appendChild(changeEntries);
-        for (change of changeData) {
-            //console.log(change);
-            // entry
-            entry = document.createElement('div');
-            entry.className = 'change-entry';
-            changeEntries.appendChild(entry);
-            // type
-            obj = document.createElement('span');
-            obj.className = 'change-type';
-            obj.innerText = change.type;
-            entry.appendChild(obj);
-            // from
-            obj = document.createElement('span');
-            obj.className = 'change-from';
-            obj.innerText = change.from.fields.names[0].fields.name;
-            entry.appendChild(obj);
-            // to
-            obj = document.createElement('span');
-            obj.className = 'change-to';
-            obj.innerText = change.to.fields.names[0].fields.name;
-            entry.appendChild(obj);
-            // buttons div
-            obj = document.createElement('div');
-            entry.appendChild(obj);
-            // zoom button
-            obj = document.createElement('button');
-            obj.className = 'button small';
-            obj.innerText = 'Show';
-            let id = change.id;
-            obj.onclick = function() {zoomToFeat(highlightLayer, id)};
-            entry.appendChild(obj);
-        };
     };
 </script>
 
@@ -911,306 +771,5 @@
     setCurrentDate(events[currentDateIndex]['date_start'])
 </script>
 
-
-
-<!--
-JAVASCRIPT VERSION TO POPULATE TIMELINE (NOT FINISHED)
-
-<script>
-    function getAllDates() {
-        urlParams = new URLSearchParams(window.location.search);
-        queryString = '?model=changeManager.Event';
-        for (key of urlParams.keys()) {
-            if (key.endsWith('_source')) {continue};
-            val = urlParams.get(key);
-            key = 'snapshots__' + key; // queries boundary refs of an event's snapshots
-            queryString += `&${key}=${val}`;
-        };
-        queryString += '&distinct=1'
-        url = "{% url 'api_filter' %}" + queryString;
-        console.log(url);
-        fetch(url).then(resp=>resp.json()).then(data=>datesInit(data));
-    };
-
-    function datesInit(data) {
-        console.log(data);
-        // set things
-        populateTimeline(data);
-    };
-
-    function populateTimeline(events) {
-        // turn into unique dates
-        dates = {};
-        for (event of events) {
-            dates[event.fields.date_start] = true;
-            dates[event.fields.date_end] = true;
-        };
-        dates = Object.keys(dates);
-        // find total span in ms
-        dates.sort();
-        minDateNum = Date.parse(dates[0]);
-        maxDateNum = Date.parse(dates[dates.length-1]);
-        dateSpanNum = maxDateNum - minDateNum;
-        // timeline
-        timelineDiv = document.getElementById('timeline-data');
-        // tick date labels
-        tickLabelsDiv = document.createElement('div');
-        tickLabelsDiv.id = 'date-labels-div';
-        function getTickPercent(date) {
-            num = Date.parse(date);
-            frac = (num - minDateNum) / dateSpanNum;
-            return frac * 100.0;
-        };
-        function getTicks(dates) {
-            dates.sort();
-            minDateNum = Date.parse(dates[0]);
-            maxDateNum = Date.parse(dates[dates.length-1]);
-            dateSpanNum = maxDateNum - minDateNum;
-            numTicks = 10;
-            dateIncr = dateSpanNum / numTicks;
-            for (let i=minDateNum; maxDateNum; i+dateIncr) {
-
-            }
-        }
-        for (event of events) {
-            label = document.createElement('div');
-            label.className = 'date-label';
-            label.style = `left:${perc}; right:${perc}`; // positions the label
-        };
-        timelineDiv.appendChild(tickLabelsDiv);
-
-    // init
-    getAllDates();
-</script>
-
--->
-
-
-
-
-<!--
-<script>
-    function getTrackData(names) {
-        url = "{% url 'api_track' %}" + '?names=' + names[0];
-        console.log(url);
-        fetch(url).then(resp=>resp.json()).then(data=>trackDataLoaded(data));
-    };
-
-    function trackDataLoaded(data) {
-        populateTrackData(data);
-        populateTrackSources(data);
-    };
-
-    function populateTrackData(data) {
-        console.log(data);
-        div = document.getElementById('timeline-div');
-        div.innerHTML = '';
-        mapNum = 1;
-        for (entry of data.entries) {
-            entryDiv = document.createElement('div');
-            entryDiv.className = "timeline-entry";
-            div.appendChild(entryDiv);
-
-            date = document.createElement('h3');
-            date.className = "timeline-entry-date";
-            valid_from = entry.valid_from.slice(0, 4);
-            valid_to = entry.valid_to.slice(0, 4);
-            date.innerText = `${valid_from} - ${valid_to}`;
-            entryDiv.appendChild(date);
-
-            content = document.createElement('div');
-            content.className = "timeline-entry-content box";
-
-            // dataset boundary snapshots
-            if (entry.type == 'DataSource') {
-                titleDiv = document.createElement('h4');
-                titleDiv.className = "row";
-                icon = document.createElement('img');
-                icon.style = "height:20px"
-                icon.src = "{% static 'images/dataset.png' %}";
-                titleDiv.appendChild(icon);
-                title = document.createElement('h4');
-                sourceLink = `<a href="/source/${entry.source_id}">${entry.source}</a>`;
-                title.innerHTML = `Boundary Snapshot from ${sourceLink}`;
-                titleDiv.appendChild(title);
-                content.appendChild(titleDiv);
-                mapDiv = document.createElement('div');
-                mapDiv.id = 'snapshot-map-' + mapNum;
-                mapDiv.style = 'width:100%; height:300px';
-                content.appendChild(mapDiv);
-                details = document.createElement('span');
-                details.innerHTML = `${entry.snapshots.length} Boundaries`;
-                content.appendChild(details);
-                entryDiv.appendChild(content);
-
-                // create and load snapshot map
-                createSnapshotMap(mapNum, entry.snapshots);
-
-                mapNum += 1;
-            };
-
-            // map boundary snapshots
-            if (entry.type == 'MapSource') {
-                titleDiv = document.createElement('h4');
-                titleDiv.className = "row";
-                icon = document.createElement('img');
-                icon.style = "height:20px"
-                icon.src = "{% static 'images/map.png' %}";
-                titleDiv.appendChild(icon);
-                title = document.createElement('h4');
-                sourceLink = `<a href="/source/${entry.source_id}">${entry.source}</a>`;
-                title.innerHTML = `Map Snapshot from ${sourceLink}`;
-                titleDiv.appendChild(title);
-                content.appendChild(titleDiv);
-                mapDiv = document.createElement('div');
-                mapDiv.id = 'snapshot-map-' + mapNum;
-                mapDiv.style = 'width:100%; height:300px';
-                content.appendChild(mapDiv);
-                details = document.createElement('span');
-                details.innerHTML = `${entry.snapshots.length} Boundaries`;
-                content.appendChild(details);
-                entryDiv.appendChild(content);
-
-                // create and load snapshot map
-                createMapSourceMap(mapNum, entry.source_url, entry.snapshots);
-
-                mapNum += 1;
-            };
-            
-        };
-    };
-
-    function populateTrackSources(data) {
-        valid_froms = [];
-        valid_tos = [];
-        for (entry of data.entries) {
-            valid_froms.push(entry.valid_from);
-            valid_tos.push(entry.valid_to);
-        };
-        valid_froms.sort();
-        valid_from = valid_froms[0].slice(0, 4);
-        valid_tos.sort();
-        valid_to = valid_tos[valid_tos.length-1].slice(0, 4);
-        document.getElementById('timeperiod').innerText = `${valid_from} - ${valid_to}`;
-        document.getElementById('dataset_count').innerText = data.datasets.length;
-        document.getElementById('map_count').innerText = data.maps.length;
-        document.getElementById('text_count').innerText = data.texts.length;
-    }
-
-    function createSnapshotMap(mapId, snapshotIds) {
-        // layer
-        let snapshotLayer = new ol.layer.Vector({
-            source: new ol.source.Vector(),
-            style: mainGetStyle,
-        });
-
-        // map
-        let map = new ol.Map({
-            target: 'snapshot-map-' + mapId,
-            controls: ol.control.defaults().extend([new ol.control.ScaleLine({units: 'metric'}),
-                                                    ]),
-            layers: [
-            new ol.layer.Tile({
-                source: new ol.source.XYZ({
-                    attributions: 'Satellite Imagery from Google',
-                    url:
-                    'http://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}',
-                    maxZoom: 20,
-                    crossOrigin: 'anonymous' // necessary for converting map to img during pdf generation: https://stackoverflow.com/questions/66671183/how-to-export-map-image-in-openlayer-6-without-cors-problems-tainted-canvas-iss
-                })}),
-                snapshotLayer
-            ],
-            view: new ol.View({
-                center: ol.proj.fromLonLat([0,0]),
-                zoom: 1
-            })
-        });
-
-        // add map data
-        function addLayerData(data) {
-            feats = new ol.format.GeoJSON().readFeatures(data, {dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857'});
-            // add and zoom the data
-            snapshotLayer.getSource().addFeatures(feats);
-            map.getView().fit(snapshotLayer.getSource().getExtent());
-        };
-        let snapshotUrl = "{% url 'api_snapshots' %}?ids=" + snapshotIds.join(',');
-        fetch(snapshotUrl).then(resp=>resp.json()).then(data=>addLayerData(data));
-        
-    }
-
-    function createMapSourceMap(mapId, mapUrl, snapshotIds) {
-        // image pixel projection
-        const projection = new ol.proj.Projection({
-            code: 'pixel-map',
-            units: 'pixels',
-            extent: [0, 0, 10000, 10000],
-        });
-
-        // snapshot layer
-        let snapshotLayer = new ol.layer.Vector({
-            source: new ol.source.Vector(),
-            style: mainGetStyle,
-        });
-
-        // map image layer
-        let mapLayer = new ol.layer.Image({});
-        function setImageSource (url) {
-            // clear old source
-            mapLayer.setSource();
-            if (!url) {
-                url = 'https://www.av.se/Static/images/placeholder.png';
-            };
-            // what to do on image load
-            const img = document.createElement('img');
-            img.onload = function() {
-                // get image extent
-                const extent = [0, 0, img.width, img.height];
-                // set source
-                mapLayer.setSource(
-                    new ol.source.ImageStatic({
-                        url: url,
-                        imageExtent: extent,
-                    }),
-                );
-                // zoom to image extent
-                //map.getView().fit(mapLayer.getSource().getImageExtent())
-            };
-            // begin loading image
-            img.src = url;
-        };
-        setImageSource(mapUrl);
-
-        // map
-        let map = new ol.Map({
-            target: 'snapshot-map-' + mapId,
-            controls: ol.control.defaults().extend([new ol.control.ScaleLine({units: 'metric'}),
-                                                    ]),
-            layers: [mapLayer,snapshotLayer],
-            view: new ol.View({
-                projection,
-                center: [0,0], //getCenter(extent),
-                zoom: 2
-            })
-        });
-
-        // add map data
-        function addLayerData(data) {
-            feats = new ol.format.GeoJSON().readFeatures(data, {});
-            // add and zoom the data
-            snapshotLayer.getSource().addFeatures(feats);
-            map.getView().fit(snapshotLayer.getSource().getExtent());
-        };
-        let snapshotUrl = "{% url 'api_snapshots' %}?ids=" + snapshotIds.join(',');
-        fetch(snapshotUrl).then(resp=>resp.json()).then(data=>addLayerData(data));
-        
-    }
-
-    // get data on startup
-    nameList = {{ names|safe }};
-    console.log(nameList);
-    getTrackData(nameList);
-
-</script>
--->
 
 {% endblock %}
