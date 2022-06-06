@@ -241,7 +241,7 @@ function calcSpatialRelations(feat, features) {
     return matches;
 };
 
-function calcAllSpatialRelations(data1, data2, onSuccess, onProgress=null) {
+function calcAllSpatialRelations(data1, data2, onProgress, onSuccess=null) {
     // calc relations from 1 to 2
     // calculate everything in background and receive results at end
     // to avoid locking up the entire gui
@@ -256,21 +256,18 @@ function calcAllSpatialRelations(data1, data2, onSuccess, onProgress=null) {
     console.log(matchingWorker);
     
     // define how to process messages
-    function processResults(results) {
-        console.log('received results:');
-        console.log(results);
-        onSuccess(results);
-    };
     function processMessage(event) {
         let [status,data] = event.data;
-        if (status == 'processing') {
-            let [i,total] = data;
+        if (status == 'processed') {
+            let [i,total,feat,matches] = data;
             if (onProgress) {
-                onProgress(i, total);
+                onProgress(i, total, feat, matches);
             };
         } else if (status == 'finished') {
-            let results = data;
-            processResults(results);
+            console.log('finishing');
+            if (onSuccess) {
+                onSuccess();
+            };
         };
     };
     matchingWorker.onmessage = processMessage;

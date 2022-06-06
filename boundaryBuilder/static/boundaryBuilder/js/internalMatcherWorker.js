@@ -80,19 +80,16 @@ function calcSpatialRelations(feat, features) {
 };
 
 function calcAllSpatialRelations(features1, features2) {
-    results = [];
     let total = features1.length;
     for (let i=0; i<total; i++) {
-        // report progress
-        let status = 'processing';
-        let msg = [i+1,total];
-        self.postMessage([status,msg]);
         // process
         feat1 = features1[i];
         matches = calcSpatialRelations(feat1, features2);
-        results.push([feat1, matches]);
+        // report back results
+        let status = 'processed';
+        let msg = [i+1,total,feat1,matches];
+        self.postMessage([status,msg]);
     };
-    return results;
 };
 
 self.onmessage = function(event) {
@@ -105,12 +102,10 @@ self.onmessage = function(event) {
     features2 = loadFeatures(data2);
     console.log('worker: data loaded')
     // calc relations
-    matches = calcAllSpatialRelations(features1, features2);
+    calcAllSpatialRelations(features1, features2);
     console.log('worker: matching done')
-    // strip off geometry to avoid returning too much data
-    for (feat1 of features1) {delete feat1['geometry']};
-    for (feat2 of features2) {delete feat2['geometry']};
+    // finish
     let status = 'finished';
-    let msg = [features1,features2,matches];
+    let msg = [];
     self.postMessage([status,msg]);
 };

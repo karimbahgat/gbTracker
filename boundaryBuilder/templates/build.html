@@ -171,6 +171,20 @@
         padding: 3px;
     }
 
+    .from-changes-header {
+        width: 100%;
+        display: flex;
+        flex-direction: row;
+        padding: 0;
+        margin: 0;
+        justify-content: space-between;
+    }
+
+    .from-changes-header h4 {
+        padding: 0;
+        margin: 0;
+    }
+
 </style>
 
 <section>
@@ -193,6 +207,8 @@
                     <div class="row"><img height="30px" src="{% static 'images/time.svg' %}"><h3><span id="timeperiod">XXXX-XX-XX</span></h3></div>
                     <div id="events-div" style="margin-left:0px; height:79%; overflow:auto">
                         Initializing... 
+                        <div class="change-list">
+                        </div>
                         <!--
                         <div class="change-list">
                             <div class="change-entry">
@@ -490,10 +506,91 @@
         console.log(coll);
         data1 = JSON.stringify(window.mainData);
         data2 = JSON.stringify(coll);
-        calcAllSpatialRelations(data1, data2, onSuccess=onMatchesFound);
+        // NEW: new approach
+        // calc only one feat1 at a time (ie feats2 grouped by feat1)
+        // at each point return and show results for all feat2 "to" parts that were "from" feat1
+        // parts and maps are only showed for the selected feat1
+        // eg feat1 may have given two parts to two other boundaries,
+        // including a third remaining part belonging to the shape of feat1
+        // GOAL: when going through each of the parts in the group, 
+        // the goal is to 1) ignore a change if just due to precision,
+        // 2) change the "matching" boundary (if the suggested is incorrect)
+        fromChangeData = {}; // this is a global var that gets populated
+        calcAllSpatialRelations(data1, data2, onProgress=onMatchesFound);
+        
+        // NEW, part2: 
+        // after all "from" changes have been processed,
+        // add groups of feat1 "to" parts belonging to each feat2
+
+        // after all "from" and "to" groupings have been processed,
+        // should be able to generate the final list of event types,
+        // and perform validations
+
+        // OLD: all in one go
+        //calcAllSpatialRelations(data1, data2, onSuccess=onMatchesFound);
     };
 
-    function onMatchesFound(results) {
+    function onMatchesFound(i, total, f1, related) {
+        // this processes all feat2 matches found for one particular feat1
+        console.log(`${i} of ${total} processed`);
+        console.log(f1);
+        // sort by equality
+        related = sortSpatialRelations(related, 'equality', 0.05);
+        // add to fromChangeData
+        entries = [];
+        for ([f2,stats] of related) {
+            console.log(stats);
+            console.log(f2);
+            // determine change entry
+            changeType = 'Transfer';
+            entry = {type:changeType,
+                    from:f1.properties,
+                    to:f2.properties,
+                    id:null, //changeData.length+1,
+                    };
+            entries.push(entry);
+            console.log(entry);
+        };
+        fromChangeData[f1.id] = [f1,entries];
+        // add to table
+        if (entries.length > 1) {
+            addFromChangesTable(f1, entries);
+        };
+    };
+
+    function showFromMatchGroup(id) {
+        // this gets called when clicking a particular from-group
+        // clear any existing highlight
+        highlightLayer.getSource().clear();
+        // get features
+        console.log('should show from group');
+        console.log(id);
+        [f1,entries] = fromChangeData[id];
+        feat1 = mainLayer.getSource().getFeatureById(f1.properties.pk);
+        for (entry of entries) {
+            f2 = entry.to;
+            feat2 = comparisonLayer.getSource().getFeatureById(f2.pk);
+            // calc isec
+            try {
+                isec = geomIntersection(feat1, feat2);
+            } catch(err) {
+                console.log('geometry error: '+err);
+                continue;
+            };
+            if (isec == null) {
+                continue;
+            };
+            // add to map
+            feat = new ol.format.GeoJSON().readFeature(isec);
+            //feat.setId(id);
+            highlightLayer.getSource().addFeature(feat);
+        };
+        // zoom
+        zoomToFeat(mainLayer, id);
+    };
+
+    /*
+    function onMatchesFoundOLD(results) {
         [feats1,feats2,matches] = results;
         bestMatches = calcBestMatches(matches);
         //console.log(bestMatches);
@@ -567,10 +664,10 @@
                 highlightLayer.getSource().addFeature(feat);
             };
         };
-        */
         // show changes in list
         addSuggestedChanges(changeData);
     };
+    */
 
     function zoomToFeat(lyr, id) {
         feat = lyr.getSource().getFeatureById(id);
@@ -579,7 +676,62 @@
         );
     };
 
-    function addSuggestedChanges(changeData) {
+    function addFromChangesTable(f1, changes) {
+        // add group containing list of each detected change event in the right panel
+        div = document.getElementById('events-div');
+        groupDiv = document.createElement('div');
+        groupDiv.className = 'from-changes';
+        div.appendChild(groupDiv);
+        // header row
+        header = document.createElement('div');
+        header.className = 'from-changes-header';
+        groupDiv.appendChild(header);
+        // header title
+        obj = document.createElement('h4');
+        obj.innerText = `From: ${f1.properties.fields.names[0].fields.name}`;
+        header.appendChild(obj);
+        // buttons div
+        buttons = document.createElement('div');
+        header.appendChild(buttons);
+        // zoom button
+        obj = document.createElement('button');
+        obj.className = 'button small';
+        obj.innerText = 'Show';
+        let id = f1.id;
+        obj.onclick = function() {showFromMatchGroup(id)};
+        buttons.appendChild(obj);
+        // loop changes
+        changeEntries = document.createElement('div');
+        changeEntries.className = 'change-list';
+        groupDiv.appendChild(changeEntries);
+        for (change of changes) {
+            //console.log(change);
+            // entry
+            entry = document.createElement('div');
+            entry.className = 'change-entry';
+            changeEntries.appendChild(entry);
+            // type
+            obj = document.createElement('span');
+            obj.className = 'change-type';
+            obj.innerText = change.type;
+            entry.appendChild(obj);
+            // from
+            obj = document.createElement('span');
+            obj.className = 'change-from';
+            obj.innerText = change.from.fields.names[0].fields.name;
+            entry.appendChild(obj);
+            // to
+            obj = document.createElement('span');
+            obj.className = 'change-to';
+            obj.innerText = change.to.fields.names[0].fields.name;
+            entry.appendChild(obj);
+        };
+        // group separator
+        obj = document.createElement('br');
+        groupDiv.appendChild(obj);
+    };
+
+    function addSuggestedChangesOLD(changeData) {
         // add list of each detected change event in the right panel
         div = document.getElementById('events-div');
         div.innerHTML = ''; // clear out
