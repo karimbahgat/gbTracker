@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="{% static 'css/ol.css' %}" type="text/css">
 
 <script src="{% static 'boundaryBuilder/js/internalSpatial.js' %}"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/4.7.3/turf.min.js"></script>
 
 <style>
     #main-section {
@@ -64,13 +64,13 @@
 
     .timespan {
         position:absolute;
-        background-color:rgb(6,75,52); 
+        background-color:#F0B323; 
         color: white;
-        border-radius:15px; 
+        border-radius:5px; 
         padding:10px;
         text-align:center;
         transform:translate(-50%, -100%)%;
-        height:50px;
+        height:41px;
         overflow:hidden;
     }
     .timespan-content {
@@ -91,7 +91,7 @@
         color: white;
         border-radius:15px; 
         padding:10px;
-        height:50px;
+        height:41px;
         overflow:hidden;
     }
     .timespan-label {
@@ -453,6 +453,7 @@
         console.log(url);
         // init loading lock
         loadingLock();
+        resetData();
         // get snapshots
         fetch(url).then(resp=>resp.json()).then(data=>snapshotsLoaded(data));
     };
@@ -467,6 +468,15 @@
     function loadingLock() {
         document.getElementById('prev-button').disabled = true;
         document.getElementById('next-button').disabled = true;
+    };
+
+    function resetData() {
+        // map layers
+        comparisonLayer.getSource().clear();
+        highlightLayer.getSource().clear();
+        // info table
+        div = document.getElementById('events-div');
+        div.innerHTML = 'Loading...'; // clear out
     };
 
     function setComparisonLayer(coll) {
@@ -490,6 +500,45 @@
         // loop and process only those below x similarity
         changeData = [];
         highlightLayer.getSource().clear();
+        for ([f1,related] of matches) {
+            console.log('---');
+            console.log(f1);
+            related = sortSpatialRelations(related, 'equality', 0.01);
+            // only process if best match < 0.95
+            //if (related[0]['equality'] >= 0.95) { continue }; // almost no change
+            // loop
+            for ([f2,stats] of related.slice(1)) {
+                console.log(stats);
+                console.log(f2);
+                // determine change entry
+                changeType = 'Transfer';
+                entry = {type:changeType,
+                        from:f1.properties,
+                        to:f2.properties,
+                        id:changeData.length+1,
+                        };
+                changeData.push(entry);
+                console.log(entry);
+                // get features
+                feat1 = mainLayer.getSource().getFeatureById(f1.properties.pk);
+                feat2 = comparisonLayer.getSource().getFeatureById(f2.properties.pk);
+                // calc diff
+                try {
+                    isec = geomIntersection(feat1, feat2);
+                } catch(err) {
+                    console.log('geometry error: '+err);
+                    continue;
+                };
+                if (isec == null) {
+                    continue;
+                };
+                // add to map
+                feat = new ol.format.GeoJSON().readFeature(isec);
+                feat.setId(entry.id);
+                highlightLayer.getSource().addFeature(feat);
+            };
+        };
+        /*
         for ([f1,f2,stats] of bestMatches) {
             if (stats.equality < 0.95) {
                 console.log(stats);
@@ -518,6 +567,7 @@
                 highlightLayer.getSource().addFeature(feat);
             };
         };
+        */
         // show changes in list
         addSuggestedChanges(changeData);
     };
@@ -538,7 +588,7 @@
         } else {
             // add header
             div.innerHTML = `
-            <div class="row">
+            <div class="row" style="width:95%">
                 <span style="width:20%">Type</span>
                 <span style="width:40%">From</span>
                 <span style="width:40%">To</span>
@@ -550,7 +600,7 @@
         changeEntries.className = 'change-list';
         div.appendChild(changeEntries);
         for (change of changeData) {
-            console.log(change);
+            //console.log(change);
             // entry
             entry = document.createElement('div');
             entry.className = 'change-entry';
@@ -577,8 +627,8 @@
             obj = document.createElement('button');
             obj.className = 'button small';
             obj.innerText = 'Show';
-            let id = change.from.pk;
-            obj.onclick = function() {zoomToFeat(mainLayer, id)};
+            let id = change.id;
+            obj.onclick = function() {zoomToFeat(highlightLayer, id)};
             entry.appendChild(obj);
         };
     };

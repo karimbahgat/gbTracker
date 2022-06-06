@@ -9,8 +9,10 @@ function loadFeatures(data) {
     for (let i=0; i<allFeatures.length; i++) {
         feat = allFeatures[i];
         try {
+            // NOTE: it matters if simplify is done before or after toWgs84
+            feat = turf.simplify(feat, {tolerance:0.1, mutate:true});
             feat = turf.toWgs84(feat); // ol geom web mercator -> turf wgs84
-            feat = turf.simplify(feat, {tolerance:0.01, mutate:true})
+            //feat = turf.simplify(feat, {tolerance:0.01, mutate:true});
             feat.properties.area = turf.convertArea(Math.abs(turf.area(feat)),'meters','kilometers');
             features.push(feat);
         } catch(error) {

@@ -74,15 +74,27 @@ function ol2turf(feat) {
     } else if (geom.getType() == 'MultiPolygon') {
         geom = turf.multiPolygon(geom.getCoordinates())
     };
+    //geom = turf.toWgs84(geom); // ol geom web mercator -> turf wgs84
     return geom;
 };
 
 // feature to feature difference
 function geomDifference(feat1, feat2) {
     geom1 = ol2turf(feat1);
+    //geom1 = turf.simplify(turf.cleanCoords(geom1), {tolerance:0.05, mutate:true})
     geom2 = ol2turf(feat2);
+    //geom2 = turf.simplify(turf.cleanCoords(geom2), {tolerance:0.05, mutate:true})
     diff = turf.difference(geom1, geom2);
     return diff;
+};
+
+function geomIntersection(feat1, feat2) {
+    geom1 = ol2turf(feat1);
+    //geom1 = turf.cleanCoords(geom1); //turf.simplify(turf.cleanCoords(geom1), {tolerance:0.01, mutate:true})
+    geom2 = ol2turf(feat2);
+    //geom2 = turf.cleanCoords(geom2); //turf.simplify(turf.cleanCoords(geom2), {tolerance:0.01, mutate:true})
+    isec = turf.intersect(geom1, geom2);
+    return isec;
 };
 
 // feature to feature similarity
