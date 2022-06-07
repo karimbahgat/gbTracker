@@ -3,16 +3,18 @@ importScripts('https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js'
 
 function loadFeatures(data) {
     // load geojson objects from geojson string
-    allFeatures = JSON.parse(data)['features'];
+    let allFeatures = JSON.parse(data)['features'];
     // reproject and simplify geometries, plus precalc areas
-    features = [];
+    let features = [];
     for (let i=0; i<allFeatures.length; i++) {
-        feat = allFeatures[i];
+        let feat = allFeatures[i];
         try {
             // NOTE: it matters if simplify is done before or after toWgs84
-            feat = turf.simplify(feat, {tolerance:0.1, mutate:true});
-            feat = turf.toWgs84(feat); // ol geom web mercator -> turf wgs84
+            // NOTE: toWgs84 is no longer needed, since api data is already wgs84
+            feat = turf.simplify(feat, {tolerance:0.001, mutate:true});
+            //feat = turf.toWgs84(feat); // ol geom web mercator -> turf wgs84
             //feat = turf.simplify(feat, {tolerance:0.01, mutate:true});
+            //console.log(turf.bbox(feat))
             feat.properties.area = turf.convertArea(Math.abs(turf.area(feat)),'meters','kilometers');
             features.push(feat);
         } catch(error) {
@@ -37,7 +39,7 @@ function similarity(geom1, geom2) {
 
     // calc intersection
     //alert('calc intersection');
-    var isec = turf.intersect(geom1, geom2);
+    let isec = turf.intersect(geom1, geom2);
     if (isec == null) {
         // exit early if no intersection
         return {'equality':0, 'within':0, 'contains':0}
@@ -45,33 +47,58 @@ function similarity(geom1, geom2) {
 
     // calc union
     //alert('calc union');
-    var union = turf.union(geom1, geom2);
+    let union = turf.union(geom1, geom2);
 
     // calc metrics
     //alert('calc areas');
-    var geom1Area = geom1.properties.area;
-    var geom2Area = geom2.properties.area;
-    var unionArea = turf.convertArea(Math.abs(turf.area(union)), 'meters', 'kilometers');
-    var isecArea = turf.convertArea(Math.abs(turf.area(isec)), 'meters', 'kilometers');
-    var areas = {'geom1Area':geom1Area, 'geom2Area':geom2Area, 'unionArea':unionArea, 'isecArea':isecArea};
+    let geom1Area = geom1.properties.area;
+    let geom2Area = geom2.properties.area;
+    let unionArea = turf.convertArea(Math.abs(turf.area(union)), 'meters', 'kilometers');
+    let isecArea = turf.convertArea(Math.abs(turf.area(isec)), 'meters', 'kilometers');
+    let areas = {'geom1Area':geom1Area, 'geom2Area':geom2Area, 'unionArea':unionArea, 'isecArea':isecArea};
     //alert(JSON.stringify(areas));
     
-    var results = {};
+    let results = {};
     results.equality = isecArea / unionArea;
     results.within = isecArea / geom1Area;
     results.contains = isecArea / geom2Area;
+
+    /*
+    if (geom1.properties.pk != geom2.properties.pk) {
+        console.log(turf.bbox(geom1))
+        console.log(turf.bbox(geom2))
+        console.log(geom1)
+        console.log(geom2)
+        console.log(areas)
+        console.log(results)
+    };
+    */
     return results;
 };
 
+function bboxIntersects(bbox1, bbox2) {
+    if (bbox1[2] < bbox2[0]) { return false };
+    if (bbox1[3] < bbox2[1]) { return false };
+    if (bbox1[0] > bbox2[2]) { return false };
+    if (bbox1[1] > bbox2[3]) { return false };
+    return true;
+};
+
 function calcSpatialRelations(feat, features) {
-    var matches = [];
-    bbox1 = turf.bboxPolygon(turf.bbox(feat));
-    for (feat2 of features) {
-        bbox2 = turf.bboxPolygon(turf.bbox(feat2));
-        if (!turf.booleanIntersects(bbox1, bbox2)) {
+    let matches = [];
+    let bbox1 = turf.bbox(feat);
+    for (let feat2 of features) {
+        let bbox2 = turf.bbox(feat2);
+        if (!bboxIntersects(bbox1, bbox2)) {
             continue;
         };
-        simil = similarity(feat, feat2);
+        let simil;
+        try {
+            simil = similarity(feat, feat2);
+        } catch (error) {
+            console.warn('error calculating similarity: '+error);
+            continue;
+        };
         if (simil.equality > 0.0) {
             matches.push([feat2,simil]);
         };
@@ -83,7 +110,7 @@ function calcAllSpatialRelations(features1, features2) {
     let total = features1.length;
     for (let i=0; i<total; i++) {
         // process
-        feat1 = features1[i];
+        let feat1 = features1[i];
         matches = calcSpatialRelations(feat1, features2);
         // report back results
         let status = 'processed';
@@ -93,13 +120,13 @@ function calcAllSpatialRelations(features1, features2) {
 };
 
 self.onmessage = function(event) {
-    var args = event.data;
+    let args = event.data;
     console.log('worker received args');
     // load into feature geojsons
-    data1 = args[0];
-    data2 = args[1];
-    features1 = loadFeatures(data1);
-    features2 = loadFeatures(data2);
+    let data1 = args[0];
+    let data2 = args[1];
+    let features1 = loadFeatures(data1);
+    let features2 = loadFeatures(data2);
     console.log('worker: data loaded')
     // calc relations
     calcAllSpatialRelations(features1, features2);

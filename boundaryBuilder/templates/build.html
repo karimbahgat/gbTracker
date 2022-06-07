@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="{% static 'css/ol.css' %}" type="text/css">
 
 <script src="{% static 'boundaryBuilder/js/internalSpatial.js' %}"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/4.7.3/turf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/5.0.4/turf.min.js"></script>
 
 <style>
     #main-section {
@@ -301,28 +301,28 @@
     // styling
     function getLargestGeom(feature) {
         // create a geometry that defines where the label will be display
-        var geom = feature.getGeometry();
+        let geom = feature.getGeometry();
+        let newGeom;
         if (geom.getType() == 'Polygon') {
             // polygon
             // place label at the bbox/center of the polygon
-            var extent = feature.getGeometry().getExtent();
-            var newGeom = ol.geom.Polygon.fromExtent(extent);
+            let extent = feature.getGeometry().getExtent();
+            newGeom = ol.geom.Polygon.fromExtent(extent);
         } else {
             // multi polygon
             // place label at the bbox/center of the largest polygon
-            var largestGeom = null;
-            var largestArea = null;
-            for (poly of geom.getPolygons()) {
-                var extent = poly.getExtent();
-                var extentGeom = ol.geom.Polygon.fromExtent(extent);
-                var extentArea = extentGeom.getArea();
+            let largestGeom = null;
+            let largestArea = null;
+            for (let poly of geom.getPolygons()) {
+                let extent = poly.getExtent();
+                let extentGeom = ol.geom.Polygon.fromExtent(extent);
+                let extentArea = extentGeom.getArea();
                 if (extentArea > largestArea) {
                     largestGeom = extentGeom;
                     largestArea = extentArea;
                 };
             };
-            var newGeom = largestGeom;
-            
+            newGeom = largestGeom;
         };
         return newGeom;
     };
@@ -437,26 +437,26 @@
     };
 
     function snapshotsToGeoJSON(data) {
-        coll = {type:'FeatureCollection', features:[]}
-        for (snap of data) {
-            geom = snap.fields.geom;
-            props = boundaryReferenceToProperties(snap.fields.boundary_ref);
-            feat = {type:'Feature', geometry:geom, properties:props, id:props.pk};
+        let coll = {type:'FeatureCollection', features:[]}
+        for (let snap of data) {
+            let geom = snap.fields.geom;
+            let props = boundaryReferenceToProperties(snap.fields.boundary_ref);
+            let feat = {type:'Feature', geometry:geom, properties:props, id:props.pk};
             coll.features.push(feat);
         };
         return coll;
     };
 
     function GeoJSONToFeatures(coll) {
-        feats = new ol.format.GeoJSON().readFeatures(coll, {dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857'});
+        let feats = new ol.format.GeoJSON().readFeatures(coll, {dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857'});
         return feats;
     };
 
     function mapInit(data) {
         console.log(data)
-        coll = snapshotsToGeoJSON(data);
+        let coll = snapshotsToGeoJSON(data);
         window.mainData = coll;
-        feats = GeoJSONToFeatures(coll);
+        let feats = GeoJSONToFeatures(coll);
         mainLayer.getSource().addFeatures(feats);
         map.getView().fit(mainLayer.getSource().getExtent());
     };
@@ -491,7 +491,7 @@
     };
 
     function snapshotsLoaded(data) {
-        coll = snapshotsToGeoJSON(data);
+        let coll = snapshotsToGeoJSON(data);
         setComparisonLayer(coll);
         boundaryCompare(coll);
     };
@@ -521,17 +521,19 @@
 
     function setComparisonLayer(coll) {
         comparisonLayer.getSource().clear();
-        feats = GeoJSONToFeatures(coll);
+        let feats = GeoJSONToFeatures(coll);
         comparisonLayer.getSource().addFeatures(feats);
     };
 
     // comparisons
+    window.fromChangeData = {}; // this is a global var that gets populated
+    
     function boundaryCompare(coll) {
         // this is the main boundary comparison procedure
         console.log(coll);
-        data1 = JSON.stringify(window.mainData);
-        data2 = JSON.stringify(coll);
-        // NEW: new approach
+        let data1 = JSON.stringify(window.mainData);
+        let data2 = JSON.stringify(coll);
+        // new approach
         // calc only one feat1 at a time (ie feats2 grouped by feat1)
         // at each point return and show results for all feat2 "to" parts that were "from" feat1
         // parts and maps are only showed for the selected feat1
@@ -540,19 +542,19 @@
         // GOAL: when going through each of the parts in the group, 
         // the goal is to 1) ignore a change if just due to precision,
         // 2) change the "matching" boundary (if the suggested is incorrect)
-        fromChangeData = {}; // this is a global var that gets populated
+        window.fromChangeData = {}; // this is a global var that gets populated
         calcAllSpatialRelations(data1, data2, onProgress=onMatchesFound, onSuccess=onMatchesFinished);
         
-        // NEW, part2: 
+        // part2: 
         // after all "from" changes have been processed,
-        // add groups of feat1 "to" parts belonging to each feat2
+        // add groups of feat1 "from" parts belonging to each feat2
+
+        // part3: 
+        // detect created or dissolved types by looking for feat1/2 with no match
 
         // after all "from" and "to" groupings have been processed,
         // should be able to generate the final list of event types,
         // and perform validations
-
-        // OLD: all in one go
-        //calcAllSpatialRelations(data1, data2, onSuccess=onMatchesFound);
     };
 
     function onMatchesFound(i, total, f1, related) {
@@ -562,24 +564,26 @@
         // sort by equality
         related = sortSpatialRelations(related, 'equality', 0.0);
         // add to fromChangeData
-        entries = [];
-        for ([f2,stats] of related) {
-            if (stats.within < 0.05) { continue }
+        let entries = [];
+        for (let [f2,stats] of related) {
+            if (stats.equality >= 0.99) { continue }; // near duplicate
+            if (stats.within < 0.05) { continue }; // barely overlapping
             console.log(stats);
             console.log(f2);
             // determine change entry
-            changeType = 'Transfer';
-            entry = {type:changeType,
+            let changeType = 'Transfer';
+            let entry = {type:changeType,
                     from:f1.properties,
                     to:f2.properties,
+                    stats:stats,
                     id:null, //changeData.length+1,
                     };
             entries.push(entry);
             console.log(entry);
         };
-        fromChangeData[f1.id] = [f1,entries];
         // add to table
-        if (entries.length > 1) {
+        if (entries.length > 0) {
+            window.fromChangeData[f1.id] = [f1,entries];
             addFromChangesTable(f1, entries);
         };
     };
@@ -593,7 +597,7 @@
             status.innerText = 'No changes detected for this date';
         } else {
             // loading finished and succeded
-            status.innerText = ''; 
+            status.innerText = `Found ${Object.keys(window.fromChangeData).length} boundaries with changes`; 
         };
         // turn back on nav buttons
         updateNavButtons(dates[currentDateIndex]);
@@ -606,12 +610,13 @@
         // get features
         console.log('should show from group');
         console.log(id);
-        [f1,entries] = fromChangeData[id];
-        feat1 = mainLayer.getSource().getFeatureById(f1.properties.pk);
+        let [f1,entries] = window.fromChangeData[id];
+        let feat1 = mainLayer.getSource().getFeatureById(f1.properties.pk);
         for (entry of entries) {
-            f2 = entry.to;
-            feat2 = comparisonLayer.getSource().getFeatureById(f2.pk);
+            let f2 = entry.to;
+            let feat2 = comparisonLayer.getSource().getFeatureById(f2.pk);
             // calc isec
+            let isec;
             try {
                 isec = geomIntersection(feat1, feat2);
             } catch(err) {
@@ -622,8 +627,10 @@
                 continue;
             };
             // add to map
-            feat = new ol.format.GeoJSON().readFeature(isec);
+            let feat = new ol.format.GeoJSON().readFeature(isec);
             //feat.setId(id);
+            //highlightLayer.getSource().addFeature(feat1);
+            //highlightLayer.getSource().addFeature(feat2);
             highlightLayer.getSource().addFeature(feat);
         };
         // zoom
@@ -631,7 +638,7 @@
     };
 
     function zoomToFeat(lyr, id) {
-        feat = lyr.getSource().getFeatureById(id);
+        let feat = lyr.getSource().getFeatureById(id);
         map.getView().fit(feat.getGeometry().getExtent(),
                           {'duration':500, 'padding':[10,10,10,10]}
         );
@@ -684,7 +691,8 @@
             // to
             obj = document.createElement('span');
             obj.className = 'change-to';
-            obj.innerText = change.to.fields.names[0].fields.name;
+            let perc = (change.stats.within*100).toFixed(0);
+            obj.innerText = change.to.fields.names[0].fields.name + ` (${perc}%)`;
             entry.appendChild(obj);
         };
         // group separator
