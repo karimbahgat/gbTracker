@@ -461,6 +461,14 @@
         map.getView().fit(mainLayer.getSource().getExtent());
     };
 
+    function updateCurrentBoundaries(coll) {
+        window.mainData = coll;
+        let feats = GeoJSONToFeatures(coll);
+        mainLayer.getSource().clear();
+        mainLayer.getSource().addFeatures(feats);
+        map.getView().fit(mainLayer.getSource().getExtent());
+    };
+
     // init
     getMapData();
 </script>
@@ -557,6 +565,202 @@
         // and perform validations
     };
 
+    function lookupBoundary() {
+        // search by name or geometry
+        // error if couldnt find
+        // also change the startdate of the newer boundary / enddate of the older boundary
+        return;
+    };
+
+    function groupByFromChanges() {
+        // 2) Group and union all geom parts by from-boundary
+        // for every from-boundary
+        // Add what remains of giving province (if anything left/didn't dissolve)
+        // ...oldBoundary = ...
+        // Union all parts belonging to same fromprov, ie breakaways and parttransfers
+        return;
+    };
+
+    function groupByToChanges() {
+        // 1) Group all entries by to-boundary as list of transfer parts
+        // for every to-boundary
+        // newBoundary = changes[0].to
+        // for each change
+        // if change is transfer or merge
+        // get part that was transferred
+        // change.geometry = turf.intersect(newBoundary.geometry, change.geometry)
+        // subtract that part from the newer boundary
+        // newBoundary.geometry = turf.difference(newBoundary.geometry, change.geometry)
+        // or if change is splitpart
+        // the whole thing used to be part of an older prov
+        // ...and so should just be unioned as it is
+        // parts.push(change)
+        
+        // If newinfo is the only change
+        // changes[0].geometry = newBoundary.geometry
+        // parts.push(changes[0])
+        
+        // If transfer or merge
+        // If has "created" type, trim off all received parts
+        // ...and check to make sure there's nothing left of newBoundary
+        // If does not have "created" type, make sure there's still something left
+        // ...ie it already existed prior to the changes.
+        // ...AND add extra prov how it looked before
+        // - apply any info changes
+        // - parts.push(trimmedBoundary)
+        return;
+    };
+
+    function applyReverseBoundaryChanges() {
+        // 1) Group all entries by to-boundary as list of transfer parts
+        // 2) Group and union all geom parts by from-boundary
+        // 3) Add to final data? 
+        // 4) Maybe change all remaining provs via * (parent change)
+        return;
+    };
+
+    function groupBy(items, keyFunc) {
+        // brute force, not very effective
+        let keys = {};
+        for (let item of items) {
+            key = keyFunc(item);
+            keys[key] = null;
+        };
+        keys = Object.keys(keys);
+        keys.sort();
+        let groups = [];
+        for (let key of keys) {
+            let group = [];
+            for (let item of items) {
+                if (keyFunc(item) == key) {
+                    group.push(item);
+                };
+            };
+            groups.push([key,group]);
+        };
+        return groups;
+    };
+
+    function getIntersectionParts(f1, entries) {
+        let parts = []
+        for (entry of entries) {
+            let f2props = entry.to;
+            let f2geom = entry.togeom;
+            // calc isec
+            let isec;
+            try {
+                isec = turf.intersect(f1.geometry, f2geom);
+            } catch(err) {
+                console.warn('intersect error: '+err);
+                continue;
+            };
+            if (isec == null) {
+                continue;
+            };
+            isec = isec.geometry;
+            // get as valid polys
+            if (isec.type == 'GeometryCollection') {
+                let polys = [];
+                for (let geom of isec.geometries) {
+                    if (geom.type == 'MultiPolygon') {
+                        for (let poly of geom.coordinates) {
+                            polys.push(poly);
+                        };
+                    } else if (geom.type == 'Polygon') {
+                        polys.push(geom.coordinates);
+                    };
+                };
+                if (polys.length > 0) {
+                    isec = {type:'MultiPolygon', coordinates:polys};
+                } else {
+                    continue;
+                };
+            };
+            // return as part dict
+            let part = {type:entry.type,
+                        from:f1.properties,
+                        to:f2props,
+                        geometry:isec}
+            parts.push(part);
+        };
+        return parts;
+    };
+
+    function getUnion(geoms) {
+        let cumul = geoj2turf(geoms[0]); 
+        for (let geom of geoms.slice(1)) {
+            geom = geoj2turf(geom);
+            //console.log(cumul)
+            //console.log(geom)
+            try {
+                cumul = turf.union(cumul, geom);
+            } catch(err) {
+                console.warn('union error: '+err);
+                continue;
+            };
+        };
+        return cumul.geometry; 
+    };
+
+    function applyForwardBoundaryChanges() {
+        console.log('applying forward boundary changes')
+
+        // 1) Group all entries by from-boundary as list of transfer parts
+        console.log('getting all intersection parts')
+        let allParts = [];
+        console.log(window.fromChangeData)
+        for (let f1 of window.mainData.features) {
+            let id = f1.properties.pk;
+            console.log(id);
+            if (window.fromChangeData.hasOwnProperty(id)) {
+                // changes
+                let changes = window.fromChangeData[id][1];
+                let parts = getIntersectionParts(f1, changes);
+                for (let part of parts) {
+                    allParts.push(part);
+                };
+            } else {
+                // no change
+                let part = {type:'Same', // just a temporary type name
+                            from:f1.properties,
+                            to:f1.properties,
+                            geometry:f1.geometry}
+                allParts.push(part);
+            };
+        };
+        console.log(allParts)
+        if (allParts.length == 0) { return };
+
+        // 2) Group and union all geom parts by to-boundary
+        console.log('unioning all intersection parts')
+        function keyFunc(part) {
+            return part.to.fields.names[0].fields.name;
+        };
+        let groups = groupBy(allParts, keyFunc);
+        let feats = [];
+        for (let [key,groupParts] of groups) {
+            console.log(key)
+            console.log(groupParts)
+            let geoms = [];
+            for (let part of groupParts) {
+                geoms.push(part.geometry);
+            };
+            let union = getUnion(geoms);
+            let props = groupParts[0].to; // just a copy for now
+            let feat = {type:'Feature',
+                        id:props.pk, // need a better id probably
+                        properties:props,
+                        geometry:union};
+            feats.push(feat);
+        };
+
+        // 3) Update the map boundaries
+        let coll = {type:'FeatureCollection',
+                    features:feats};
+        console.log(coll)
+        updateCurrentBoundaries(coll);
+    };
+
     function onMatchesFound(i, total, f1, related) {
         // this processes all feat2 matches found for one particular feat1
         console.log(`${i} of ${total} processed`);
@@ -573,11 +777,13 @@
             // determine change entry
             let changeType = 'Transfer';
             let entry = {type:changeType,
-                    from:f1.properties,
-                    to:f2.properties,
-                    stats:stats,
-                    id:null, //changeData.length+1,
-                    };
+                        from:f1.properties,
+                        to:f2.properties,
+                        fromgeom:null, // should be f1.geometry, but not needed during forward building
+                        togeom:f2.geometry,
+                        stats:stats,
+                        id:null, //changeData.length+1,
+                        };
             entries.push(entry);
             console.log(entry);
         };
@@ -620,7 +826,7 @@
             try {
                 isec = geomIntersection(feat1, feat2);
             } catch(err) {
-                console.log('geometry error: '+err);
+                console.warn('intersect error: '+err);
                 continue;
             };
             if (isec == null) {
@@ -755,6 +961,7 @@
         currentDateIndex += 1;
         date = dates[currentDateIndex];
         setCurrentDate(date);
+        applyForwardBoundaryChanges();
     };
 
     // function to update navigation buttons
