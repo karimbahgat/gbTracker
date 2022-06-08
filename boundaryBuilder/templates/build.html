@@ -92,7 +92,7 @@
         padding:10px;
         text-align:center;
         transform:translate(-50%, -100%)%;
-        height:41px;
+        height:10px;
         overflow:hidden;
     }
     .timespan-content {
@@ -113,8 +113,9 @@
         color: white;
         border-radius:15px; 
         padding:10px;
-        height:41px;
+        height:10px;
         overflow:hidden;
+        margin-bottom:10px;
     }
     .timespan-label {
         margin-right:5px; 
@@ -276,16 +277,14 @@
             {% for event in events %}
                 <div class="timespan" style="left:{{ event.date_start_perc }}%; width:{{ event.date_dur_perc }}%" title="{{ event.date_start }} &rarr; {{ event.date_end }}">
                     <div class="timespan-content">
-                        <img height="20px" src="{% static 'images/time.svg' %}" style="filter:invert(1); vertical-align:middle"/>
+                        <!--<img height="20px" src="{% static 'images/time.svg' %}" style="filter:invert(1); vertical-align:middle"/>-->
                         <span class="timespan-label">
-                            Event info... 
                         </span>
                     </div>
                 </div>
                 <div class="timespan-filler">
                     <!-- since timespans are absolute, need relative divs to fill up the height -->
                 </div>
-                <br>
             {% endfor %}
         </div>
     </div>
