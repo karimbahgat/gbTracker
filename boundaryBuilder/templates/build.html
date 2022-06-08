@@ -161,6 +161,36 @@
         background-color:rgb(200,200,200);
     }
 
+    /* history */
+    #history-div {
+    }
+
+    .history-entry {
+        display: flex;
+        flex-direction: row;
+        gap: 20px;
+        width: 100%;
+    }
+
+    .history-entry-date {
+        display: flex;
+        width: 100px;
+        height: 100px;
+        background-color: lightgray;
+        border-radius: 50%;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .history-entry-content {
+        min-height: 100px;
+        flex-grow: 1;
+    }
+
+    .history-entry-content table {
+        width: 100%;
+    }
+
     /* changes */
     .change-list {
         margin: 0px;
@@ -252,8 +282,12 @@
 
     </div>
     
+    <br>
+
+    <h3>Timeline:</h3>
+    
     <div id="timeline">
-        <div id="timeline-data" style="width:93%; min-height:80px; margin:6% 3.5%; position:relative; background-color:whitesmoke; border:rgb(200,200,200) 1px solid">
+        <div id="timeline-data" style="width:93%; min-height:80px; margin:4% 4%; position:relative; background-color:whitesmoke; border:rgb(200,200,200) 1px solid">
             <!-- tick date labels -->
             <div class="date-labels-div">
                 {% for tick in ticks %}
@@ -287,6 +321,11 @@
                 </div>
             {% endfor %}
         </div>
+    </div>
+
+    <h3>Build History:</h3>
+
+    <div id="history-div">
     </div>
 
 </section>
@@ -994,6 +1033,48 @@
 
 
 <script>
+    function addToChangeHistory() {
+        if (Object.keys(window.fromChangeData).length == 0) {
+            return;
+        };
+        let date = dates[currentDateIndex];
+        let div = document.createElement('div');
+        div.className = 'history-entry';
+        div.innerHTML = `
+            <h3 class="history-entry-date">
+                ${date}
+            </h3>
+            <div class="history-entry-content box">
+            </div>
+        `;
+        document.getElementById('history-div').prepend(div);
+        let content = div.querySelector('.history-entry-content');
+        for (let key of Object.keys(window.fromChangeData)) {
+            let changes = window.fromChangeData[key][1];
+            for (change of changes) {
+                console.log(change)
+                let entry = document.createElement('div');
+                entry.className = 'change-entry';
+                entry.innerHTML = `
+                    <span class="change-type">
+                    ${change.type}
+                    </span>
+                    <span class="change-from">
+                    ${change.from.fields.names[0].fields.name}
+                    </span>
+                    <span class="change-to">
+                    ${change.to.fields.names[0].fields.name}
+                    </span>
+                `;
+                content.appendChild(entry);
+            };
+        };
+    };
+</script>
+
+
+
+<script>
     // save all events for future use
     events = [];
     {% for event in events %}
@@ -1047,6 +1128,7 @@
         date = dates[currentDateIndex];
         setCurrentDate(date);
         applyForwardBoundaryChanges();
+        addToChangeHistory();
     };
 
     // function to update navigation buttons
