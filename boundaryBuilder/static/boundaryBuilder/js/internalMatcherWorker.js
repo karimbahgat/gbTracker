@@ -11,7 +11,8 @@ function loadFeatures(data) {
         try {
             // NOTE: it matters if simplify is done before or after toWgs84
             // NOTE: toWgs84 is no longer needed, since api data is already wgs84
-            feat = turf.simplify(feat, {tolerance:0.001, mutate:true});
+            feat = turf.simplify(feat, {tolerance:0.001, highQuality:false, mutate:true});
+            //feat = turf.buffer(feat, 0);
             //feat = turf.toWgs84(feat); // ol geom web mercator -> turf wgs84
             //feat = turf.simplify(feat, {tolerance:0.01, mutate:true});
             //console.log(turf.bbox(feat))

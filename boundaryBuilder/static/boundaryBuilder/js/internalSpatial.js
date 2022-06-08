@@ -28,6 +28,12 @@ function ol2turf(feat) {
     return turfGeom;
 };
 
+function cleanGeom(feat) {
+    feat = turf.simplify(feat, {tolerance:0.001, highQuality:true, mutate:true});
+    feat = turf.buffer(feat, 0);
+    return feat.geometry;
+};
+
 // feature to feature difference
 function geomDifference(feat1, feat2) {
     let geom1 = ol2turf(feat1);
@@ -38,14 +44,10 @@ function geomDifference(feat1, feat2) {
     return diff;
 };
 
-function geomIntersection(feat1, feat2) {
-    // note, this currently receives openlayers feats, which are in mercator proj
-    // this might impact the simplify+intersect... 
-    let geom1 = ol2turf(feat1);
-    geom1 = turf.simplify(geom1, {tolerance:0.001, mutate:true});
+function geomIntersection(geom1, geom2) {
+    geom1 = turf.simplify(geom1, {tolerance:0.001, mutate:false});
     //geom1 = turf.cleanCoords(geom1); //turf.simplify(turf.cleanCoords(geom1), {tolerance:0.01, mutate:true})
-    let geom2 = ol2turf(feat2);
-    geom2 = turf.simplify(geom2, {tolerance:0.001, mutate:true});
+    geom2 = turf.simplify(geom2, {tolerance:0.001, mutate:false});
     //geom2 = turf.cleanCoords(geom2); //turf.simplify(turf.cleanCoords(geom2), {tolerance:0.01, mutate:true})
     let isec = turf.intersect(geom1, geom2);
     return isec;

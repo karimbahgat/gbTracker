@@ -440,6 +440,7 @@
         let coll = {type:'FeatureCollection', features:[]}
         for (let snap of data) {
             let geom = snap.fields.geom;
+            //geom = cleanGeom(geom);
             let props = boundaryReferenceToProperties(snap.fields.boundary_ref);
             let feat = {type:'Feature', geometry:geom, properties:props, id:props.pk};
             coll.features.push(feat);
@@ -746,6 +747,7 @@
                 geoms.push(part.geometry);
             };
             let union = getUnion(geoms);
+            //union = cleanGeom(union);
             let props = groupParts[0].to; // just a copy for now
             let feat = {type:'Feature',
                         id:props.pk, // need a better id probably
@@ -817,14 +819,15 @@
         console.log('should show from group');
         console.log(id);
         let [f1,entries] = window.fromChangeData[id];
-        let feat1 = mainLayer.getSource().getFeatureById(f1.properties.pk);
+        //let feat1 = mainLayer.getSource().getFeatureById(f1.properties.pk);
         for (entry of entries) {
             let f2 = entry.to;
-            let feat2 = comparisonLayer.getSource().getFeatureById(f2.pk);
+            let f2geom = entry.togeom;
+            //let feat2 = comparisonLayer.getSource().getFeatureById(f2.pk);
             // calc isec
             let isec;
             try {
-                isec = geomIntersection(feat1, feat2);
+                isec = geomIntersection(f1.geometry, f2geom);
             } catch(err) {
                 console.warn('intersect error: '+err);
                 continue;
@@ -833,7 +836,7 @@
                 continue;
             };
             // add to map
-            let feat = new ol.format.GeoJSON().readFeature(isec);
+            let feat = new ol.format.GeoJSON().readFeature(isec, {dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857'});
             //feat.setId(id);
             //highlightLayer.getSource().addFeature(feat1);
             //highlightLayer.getSource().addFeature(feat2);
