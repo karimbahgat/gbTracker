@@ -763,6 +763,88 @@
         updateCurrentBoundaries(coll);
     };
 
+    function applyReverseBoundaryChanges() {
+        console.log('applying reverse boundary changes')
+        // WARNING! doesnt quite work yet...
+        // tried to reverse the logic from applyForward...
+        // but definitely contains errors/typos from porting...
+
+        // reorganize into tochangedata
+        let toChangeData = {};
+        let allChanges = [];
+        for (let id of Object.keys(window.fromChangeData)) {
+            let [f1,changes] = window.fromChangeData[id];
+            for (let change of changes) {
+                allChanges.push(change);
+            };
+        };
+        function keyFunc(change) {
+            return change.to.fields.pk;
+        };
+        let groups = groupBy(allChanges, keyFunc);
+        for (let [id,groupChanges] of groups) {
+            console.log(id)
+            console.log(groupChanges)
+            toChangeData[id] = groupChanges;
+        };
+
+        // 1) Group all entries by to-boundary as list of transfer parts
+        console.log('getting all intersection parts')
+        let allParts = [];
+        console.log(toChangeData)
+        for (let f1 of window.mainData.features) {
+            let id = f1.properties.pk;
+            console.log(id);
+            if (toChangeData.hasOwnProperty(id)) {
+                // changes
+                let changes = toChangeData[id];
+                let parts = getIntersectionParts(f1, changes);
+                for (let part of parts) {
+                    allParts.push(part);
+                };
+            } else {
+                // no change
+                let part = {type:'Same', // just a temporary type name
+                            from:f1.properties,
+                            to:f1.properties,
+                            geometry:f1.geometry}
+                allParts.push(part);
+            };
+        };
+        console.log(allParts)
+        if (allParts.length == 0) { return };
+
+        // 2) Group and union all geom parts by from-boundary
+        console.log('unioning all intersection parts')
+        function keyFunc(part) {
+            return part.from.fields.names[0].fields.name;
+        };
+        groups = groupBy(allParts, keyFunc);
+        let feats = [];
+        for (let [key,groupParts] of groups) {
+            console.log(key)
+            console.log(groupParts)
+            let geoms = [];
+            for (let part of groupParts) {
+                geoms.push(part.geometry);
+            };
+            let union = getUnion(geoms);
+            //union = cleanGeom(union);
+            let props = groupParts[0].from; // just a copy for now
+            let feat = {type:'Feature',
+                        id:props.pk, // need a better id probably
+                        properties:props,
+                        geometry:union};
+            feats.push(feat);
+        };
+
+        // 3) Update the map boundaries
+        let coll = {type:'FeatureCollection',
+                    features:feats};
+        console.log(coll)
+        updateCurrentBoundaries(coll);
+    };
+
     function onMatchesFound(i, total, f1, related) {
         // this processes all feat2 matches found for one particular feat1
         console.log(`${i} of ${total} processed`);
@@ -843,7 +925,7 @@
             highlightLayer.getSource().addFeature(feat);
         };
         // zoom
-        zoomToFeat(mainLayer, id);
+        //zoomToFeat(mainLayer, id);
     };
 
     function zoomToFeat(lyr, id) {
@@ -958,6 +1040,7 @@
         currentDateIndex -= 1;
         date = dates[currentDateIndex];
         setCurrentDate(date);
+        applyReverseBoundaryChanges();
     };
 
     function nextDate() {
