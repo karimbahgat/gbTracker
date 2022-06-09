@@ -18,10 +18,11 @@
         width:100%;
     }
 
-    #queries-div {
+    #header-div {
         display: flex;
         flex-direction: row;
-        gap: 10px;
+        width: 100%;
+        justify-content: space-between;
     }
     
     .query {
@@ -242,11 +243,22 @@
 <section>
     <div class="content">
         <header>
-            <div id="queries-div">
-                <h2>Build-Your-Own-Boundary: </h2>
-                {% for name in names %}
-                    <h3 class="query">{{ name }}</h3>
-                {% endfor %}
+            <div id="header-div">
+                <h2 style="flex-shrink:0; margin-right:10px">Build-Your-Own-Boundary: </h2>
+                <select id="country-select" onchange="reloadPage()">
+                    {% for country in countries %}
+                        <option value="{{ country }}" {% if country == current_country %}selected{% endif %}>
+                            {{ country }}
+                        </option>
+                    {% endfor %}
+                </select>
+                <select id="level-select" onchange="reloadPage()">
+                    {% for lvl in levels %}
+                        <option value="{{ lvl }}" {% if lvl == current_level %}selected{% endif %}>
+                            ADM{{ lvl }}
+                        </option>
+                    {% endfor %}
+                </select>
             </div>
         </header>
 
@@ -1153,6 +1165,24 @@
 
     // init current date
     setCurrentDate(events[currentDateIndex]['date_start'])
+</script>
+
+<script>
+    function reloadPage() {
+        let country = document.getElementById('country-select').value;
+        let level = parseInt(document.getElementById('level-select').value);
+        let paramParts = ['boundary_ref'];
+        for (let i=0; i<level; i++) {
+            console.log(i)
+            paramParts.push('parent');
+        };
+        paramParts.push('names__name');
+        let paramName = paramParts.join('__');
+        let queryString = '?' + paramName + '=' + country;
+        let url = "{% url 'build' %}" + queryString;
+        console.log(url);
+        window.location.href = url;
+    };
 </script>
 
 

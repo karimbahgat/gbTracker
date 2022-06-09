@@ -163,8 +163,22 @@ def build(request):
             cur += incr
         print(ticks)
 
+        # get all countries
+        countries = models.BoundaryReference.objects.filter(parent=None).values('names__name').distinct()
+        countries = [c['names__name'] for c in countries]
+
+        # get available levels
+        levels = [0,1,2] # hardcoded for now
+
+        # get current country and level
+        key = [key for key in request.GET.keys()
+                if key.startswith('boundary_ref__')][0]
+        level = key.count('parent__') # each __parent__ represents one level up
+        country = request.GET[key]
+
         # return
-        context = {'ticks':ticks, 'events':events}
+        context = {'ticks':ticks, 'events':events, 'countries':countries, 'levels':levels,
+                    'current_country':country, 'current_level':level}
         print(context)
         return render(request, 'build.html', context)
 
