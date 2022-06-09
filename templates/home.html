@@ -32,18 +32,49 @@
             <table style="width:100%">
                 <thead>
                     <th>Country</th>
-                    <th>Boundaries</th>
+                    <th>Admin Level</th>
                     <th>Sources</th>
+                    <th>Time Period</th>
                     <th></th>
                 </thead>
                 <tbody>
-                    {% for country in countries %}
+                    {% for countrylevels in countries %}
                         <tr>
-                            <td>{{ country }}</td>
-                            <td></td>
-                            <td></td>
                             <td>
-                                <a class="button small" href="{% url 'track' %}?names={{ country }}|*" target="_blank">View</a>
+                                {% for countrylevel in countrylevels %}
+                                    {% if countrylevel.level == 0 %}{{ countrylevel.name }}{% endif %}
+                                {% endfor %}
+                                <br>
+                            </td>
+                            <td>
+                                {% for countrylevel in countrylevels %}
+                                    ADM{{ countrylevel.level }}
+                                    <br>
+                                {% endfor %}
+                            </td>
+                            <td>
+                                {% for countrylevel in countrylevels %}
+                                    {{ countrylevel.sources }}
+                                    <br>
+                                {% endfor %}
+                            </td>
+                            <td>
+                                {% for countrylevel in countrylevels %}
+                                    {{ countrylevel.mindate }} &#x2192; {{ countrylevel.maxdate }}
+                                    <br>
+                                {% endfor %}
+                            </td>
+                            <td>
+                                {% for countrylevel in countrylevels %}
+                                    {% if countrylevel.level == 0 %}
+                                        <a class="button small" href="{% url 'build' %}?boundary_ref__names__name={{ countrylevel.name }}" target="_blank">Build</a>
+                                    {% elif countrylevel.level == 1 %}
+                                        <a class="button small" href="{% url 'build' %}?boundary_ref__parent__names__name={{ countrylevel.name }}" target="_blank">Build</a>
+                                    {% elif countrylevel.level == 2 %}
+                                        <a class="button small" href="{% url 'build' %}?boundary_ref__parent__parent__names__name={{ countrylevel.name }}" target="_blank">Build</a>
+                                    {% endif %}
+                                    <br>
+                                {% endfor %}
                             </td>
                         </tr>
                     {% endfor %}

@@ -462,9 +462,11 @@
 
 
 <script>
-    function getMapData() {
+    function getMapData(date) {
         queryString = window.location.search;
         queryString += '&model=changeManager.BoundarySnapshot';
+        queryString += '&event__date_start__lte='+date;
+        queryString += '&event__date_end__gte='+date;
         url = "{% url 'api_filter' %}" + queryString;
         console.log(url)
         fetch(url).then(resp=>resp.json()).then(data=>mapInit(data));
@@ -505,11 +507,8 @@
         let feats = GeoJSONToFeatures(coll);
         mainLayer.getSource().clear();
         mainLayer.getSource().addFeatures(feats);
-        map.getView().fit(mainLayer.getSource().getExtent());
+        //map.getView().fit(mainLayer.getSource().getExtent());
     };
-
-    // init
-    getMapData();
 </script>
 
 
@@ -1033,7 +1032,7 @@
 
 
 <script>
-    function addToChangeHistory() {
+    function addHistoryEntry() {
         if (Object.keys(window.fromChangeData).length == 0) {
             return;
         };
@@ -1128,7 +1127,7 @@
         date = dates[currentDateIndex];
         setCurrentDate(date);
         applyForwardBoundaryChanges();
-        addToChangeHistory();
+        addHistoryEntry();
     };
 
     // function to update navigation buttons
@@ -1148,6 +1147,9 @@
             nextBut.disabled = false;
         };
     };
+
+    // init main map
+    getMapData(events[currentDateIndex]['date_start']);
 
     // init current date
     setCurrentDate(events[currentDateIndex]['date_start'])
