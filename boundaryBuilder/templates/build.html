@@ -939,7 +939,7 @@
             status.innerText = `Found ${Object.keys(window.fromChangeData).length} boundaries with changes`; 
         };
         // turn back on nav buttons
-        updateNavButtons(dates[currentDateIndex]);
+        updateNavButtons(currentDate);
     };
 
     function showFromMatchGroup(id) {
@@ -1048,7 +1048,7 @@
         if (Object.keys(window.fromChangeData).length == 0) {
             return;
         };
-        let date = dates[currentDateIndex];
+        let date = currentDate;
         let div = document.createElement('div');
         div.className = 'history-entry';
         div.innerHTML = `
@@ -1117,7 +1117,7 @@
     };
 
     // functions to set dates
-    currentDateIndex = 0;
+    currentDate = events[0].date_start;
     
     function setCurrentDate(date) {
         perc = getDatePercent(date);
@@ -1127,17 +1127,38 @@
         getSnapshotsAtDate(date);
     };
 
+    function findPrevDate(date) {
+        // finds previous end-date
+        for (let i=events.length-1; i >= 0; i--) {
+            let event = events[i];
+            if (event.date_end < date) {
+                return event.date_end;
+            };
+        };
+        // otherwise jump to first date
+        return events[0].date_start;
+    };
+
+    function findNextDate(date) {
+        // finds next start-date
+        for (let event of events) {
+            if (event.date_start > date) {
+                return event.date_start;
+            };
+        };
+        // otherwise jump to last date
+        return events[events.length-1].date_end;
+    };
+
     function prevDate() {
-        currentDateIndex -= 1;
-        date = dates[currentDateIndex];
-        setCurrentDate(date);
+        currentDate = findPrevDate(currentDate);
+        setCurrentDate(currentDate);
         applyReverseBoundaryChanges();
     };
 
     function nextDate() {
-        currentDateIndex += 1;
-        date = dates[currentDateIndex];
-        setCurrentDate(date);
+        currentDate = findNextDate(currentDate);
+        setCurrentDate(currentDate);
         applyForwardBoundaryChanges();
         addHistoryEntry();
     };
@@ -1161,10 +1182,10 @@
     };
 
     // init main map
-    getMapData(events[currentDateIndex]['date_start']);
+    getMapData(currentDate);
 
     // init current date
-    setCurrentDate(events[currentDateIndex]['date_start'])
+    setCurrentDate(currentDate);
 </script>
 
 <script>
