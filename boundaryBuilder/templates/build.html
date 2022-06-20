@@ -400,10 +400,10 @@
 
     var highlightStyle = new ol.style.Style({
         fill: new ol.style.Fill({
-            color: 'rgba(255, 0, 0, 0.5)',
+            color: 'rgba(0, 255, 255, 0.5)',
         }),
         stroke: new ol.style.Stroke({
-            color: 'rgba(255, 0, 0, 1)',
+            color: 'rgba(0, 255, 255, 1)',
             width: 3
         }),
     });
@@ -975,6 +975,12 @@
         };
         // zoom
         //zoomToFeat(mainLayer, id);
+        // dehighlight after x time
+        setTimeout(function() {
+            highlightLayer.getSource().clear();
+            }, 
+            1000 // 1 seconds
+        );
     };
 
     function zoomToFeat(lyr, id) {
