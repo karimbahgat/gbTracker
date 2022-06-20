@@ -487,7 +487,7 @@
         // create canvas
         canvas = document.createElement('canvas');
         canvas.width = '25';
-        canvas.height = '10';
+        canvas.height = '20';
         ctx = canvas.getContext('2d');
         // customize line from the layer style
         f = new ol.Feature({level:lvl});
@@ -503,8 +503,8 @@
         ctx.lineWidth = width;
         // draw line
         ctx.beginPath();
-        ctx.moveTo(0, 5);
-        ctx.lineTo(25, 5);
+        ctx.moveTo(0, 10);
+        ctx.lineTo(25, 10);
         ctx.stroke();
         return canvas;
     };
