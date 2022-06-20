@@ -29,12 +29,18 @@ function ol2turf(feat) {
 };
 
 function cleanGeom(feat) {
-    feat = turf.simplify(feat, {tolerance:0.001, highQuality:true, mutate:true});
-    feat = turf.buffer(feat, 0);
-    return feat.geometry;
+    feat = turf.truncate(feat, {precision:10});
+    try {
+        feat = turf.simplify(feat, {tolerance:0.001, highQuality:false, mutate:false});
+    } catch(err) { 
+        console.warn('simplify failed');
+    };
+    //feat = turf.buffer(feat, 0);
+    return feat //.geometry;
 };
 
 // feature to feature difference
+/*
 function geomDifference(feat1, feat2) {
     let geom1 = ol2turf(feat1);
     //geom1 = turf.simplify(turf.cleanCoords(geom1), {tolerance:0.05, mutate:true})
@@ -43,14 +49,80 @@ function geomDifference(feat1, feat2) {
     let diff = turf.difference(geom1, geom2);
     return diff;
 };
+*/
 
 function geomIntersection(geom1, geom2) {
-    geom1 = turf.simplify(geom1, {tolerance:0.001, mutate:false});
+    //geom1 = turf.simplify(geom1, {tolerance:0.001, mutate:false});
     //geom1 = turf.cleanCoords(geom1); //turf.simplify(turf.cleanCoords(geom1), {tolerance:0.01, mutate:true})
-    geom2 = turf.simplify(geom2, {tolerance:0.001, mutate:false});
+    //geom2 = turf.simplify(geom2, {tolerance:0.001, mutate:false});
     //geom2 = turf.cleanCoords(geom2); //turf.simplify(turf.cleanCoords(geom2), {tolerance:0.01, mutate:true})
     let isec = turf.intersect(geom1, geom2);
     return isec;
+};
+
+function getIntersectionParts(f1, entries) {
+    f1 = cleanGeom(f1);
+    let parts = []
+    for (entry of entries) {
+        let f2props = entry.to;
+        let f2geom = entry.togeom;
+        f2geom = cleanGeom(f2geom);
+        // calc isec
+        let isec;
+        try {
+            isec = turf.intersect(f1, f2geom);
+        } catch(err) {
+            console.warn('intersect error: '+err);
+            continue;
+        };
+        if (isec == null) {
+            continue;
+        };
+        isec = isec.geometry;
+        // get as valid polys
+        if (isec.type == 'GeometryCollection') {
+            let polys = [];
+            for (let geom of isec.geometries) {
+                if (geom.type == 'MultiPolygon') {
+                    for (let poly of geom.coordinates) {
+                        polys.push(poly);
+                    };
+                } else if (geom.type == 'Polygon') {
+                    polys.push(geom.coordinates);
+                };
+            };
+            if (polys.length > 0) {
+                isec = {type:'MultiPolygon', coordinates:polys};
+            } else {
+                continue;
+            };
+        };
+        // return as part dict
+        let part = {type:entry.type,
+                    from:f1.properties,
+                    to:f2props,
+                    geometry:isec}
+        parts.push(part);
+    };
+    return parts;
+};
+
+function getUnion(geoms) {
+    let cumul = geoj2turf(geoms[0]); 
+    cumul = cleanGeom(cumul);
+    for (let geom of geoms.slice(1)) {
+        geom = geoj2turf(geom);
+        geom = cleanGeom(geom);
+        //console.log(cumul)
+        //console.log(geom)
+        try {
+            cumul = turf.union(cumul, geom);
+        } catch(err) {
+            console.warn('union error: '+err);
+            continue;
+        };
+    };
+    return cumul.geometry; 
 };
 
 // feature to feature similarity

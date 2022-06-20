@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="{% static 'css/ol.css' %}" type="text/css">
 
 <script src="{% static 'boundaryBuilder/js/internalSpatial.js' %}"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/5.0.4/turf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
 
 <style>
     #main-section {
@@ -691,67 +691,6 @@
         return groups;
     };
 
-    function getIntersectionParts(f1, entries) {
-        let parts = []
-        for (entry of entries) {
-            let f2props = entry.to;
-            let f2geom = entry.togeom;
-            // calc isec
-            let isec;
-            try {
-                isec = turf.intersect(f1.geometry, f2geom);
-            } catch(err) {
-                console.warn('intersect error: '+err);
-                continue;
-            };
-            if (isec == null) {
-                continue;
-            };
-            isec = isec.geometry;
-            // get as valid polys
-            if (isec.type == 'GeometryCollection') {
-                let polys = [];
-                for (let geom of isec.geometries) {
-                    if (geom.type == 'MultiPolygon') {
-                        for (let poly of geom.coordinates) {
-                            polys.push(poly);
-                        };
-                    } else if (geom.type == 'Polygon') {
-                        polys.push(geom.coordinates);
-                    };
-                };
-                if (polys.length > 0) {
-                    isec = {type:'MultiPolygon', coordinates:polys};
-                } else {
-                    continue;
-                };
-            };
-            // return as part dict
-            let part = {type:entry.type,
-                        from:f1.properties,
-                        to:f2props,
-                        geometry:isec}
-            parts.push(part);
-        };
-        return parts;
-    };
-
-    function getUnion(geoms) {
-        let cumul = geoj2turf(geoms[0]); 
-        for (let geom of geoms.slice(1)) {
-            geom = geoj2turf(geom);
-            //console.log(cumul)
-            //console.log(geom)
-            try {
-                cumul = turf.union(cumul, geom);
-            } catch(err) {
-                console.warn('union error: '+err);
-                continue;
-            };
-        };
-        return cumul.geometry; 
-    };
-
     function applyForwardBoundaryChanges() {
         console.log('applying forward boundary changes')
 
@@ -950,15 +889,17 @@
         console.log('should show from group');
         console.log(id);
         let [f1,entries] = window.fromChangeData[id];
+        let f1geom = cleanGeom(f1);
         //let feat1 = mainLayer.getSource().getFeatureById(f1.properties.pk);
         for (entry of entries) {
             let f2 = entry.to;
             let f2geom = entry.togeom;
+            f2geom = cleanGeom(f2geom);
             //let feat2 = comparisonLayer.getSource().getFeatureById(f2.pk);
             // calc isec
             let isec;
             try {
-                isec = geomIntersection(f1.geometry, f2geom);
+                isec = geomIntersection(f1geom, f2geom);
             } catch(err) {
                 console.warn('intersect error: '+err);
                 continue;
