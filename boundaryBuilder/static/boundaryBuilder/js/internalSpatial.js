@@ -31,9 +31,10 @@ function ol2turf(feat) {
 function cleanGeom(feat) {
     feat = turf.truncate(feat, {precision:10});
     try {
-        feat = turf.simplify(feat, {tolerance:0.001, highQuality:false, mutate:false});
+        feat = turf.cleanCoords(feat);
+        //feat = turf.simplify(feat, {tolerance:0.001, highQuality:false, mutate:false});
     } catch(err) { 
-        console.warn('simplify failed');
+        console.warn('clean failed');
     };
     //feat = turf.buffer(feat, 0);
     return feat //.geometry;
