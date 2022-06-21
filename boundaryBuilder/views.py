@@ -176,8 +176,19 @@ def build(request):
         level = key.count('parent__') # each __parent__ represents one level up
         country = request.GET[key]
 
+        # get all sources
+        params = request.GET.copy()
+        params = {key.replace('boundary_ref__','boundary_refs__'):val 
+                for key,val in request.GET.items()
+                if not key.endswith('_source')}
+        sources = models.BoundarySource.objects.filter(**params).distinct()
+        datasources = [s for s in sources if s.type == 'DataSource']
+        mapsources = [s for s in sources if s.type == 'MapSource']
+        textsources = [s for s in sources if s.type == 'TextSource']
+
         # return
         context = {'ticks':ticks, 'events':events, 'countries':countries, 'levels':levels,
+                    'datasources':datasources, 'mapsources':mapsources, 'textsources':textsources,
                     'current_country':country, 'current_level':level}
         print(context)
         return render(request, 'build.html', context)

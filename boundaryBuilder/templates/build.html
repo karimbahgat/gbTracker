@@ -10,6 +10,9 @@
 <script src="{% static 'boundaryBuilder/js/internalSpatial.js' %}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
 
+<script src="{% static 'js/jquery.min.js' %}"></script>
+<script type="text/javascript" src="{% static 'js/jquery.easytabs.js' %}"></script>
+
 <style>
     #main-section {
         display:flex;
@@ -334,6 +337,114 @@
             {% endfor %}
         </div>
     </div>
+
+    <h3>Sources:</h3>
+
+    <style>
+        .etabs { margin: 0; padding: 0; }
+        .tab { display: inline-block; zoom:1; *display:inline; background: #eee; border: solid 1px #999; border-bottom: none; -moz-border-radius: 4px 4px 0 0; -webkit-border-radius: 4px 4px 0 0; }
+        .tab a { font-size: 14px; line-height: 2em; display: block; padding: 0 10px; outline: none; }
+        .tab a:hover { text-decoration: underline; }
+        .tab.active { background: #fff; padding-top: 6px; position: relative; top: 1px; border-color: rgba(210, 215, 217, 0.75); }
+        .tab a.active { font-weight: bold; }
+        .table-container { height:200px; overflow:auto; }
+    </style>
+    
+    <div id="sources" class="tab-container">
+        <ul class='etabs'>
+            <li class='tab'><a href="#datasets-tab">Datasets ({{ datasources|length }})</a></li>
+            <li class='tab'><a href="#maps-tab">Maps ({{ mapsources|length }})</a></li>
+            <li class='tab'><a href="#texts-tab">Texts ({{ textsources|length }})</a></li>
+        </ul>
+        <div id="datasets-tab" class="tab-content box">
+            <div style="width:100%; text-align:right">
+                <a href="{% url 'datasource_add' %}" target="_blank" class="button">
+                    Add New
+                </a>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Timespan</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for src in datasources %}
+                            <tr>
+                                <td>{{ src.name }}</td>
+                                <td>{{ src.valid_from }} &#x2192; {{ src.valid_to }}</td>
+                                <td style="width:50px"><a href="{% url 'source' src.pk %}" target="_blank" class="button small">View</a></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div id="maps-tab" class="tab-content box">
+            <div style="width:100%; text-align:right">
+                <a href="{% url 'mapsource_add' %}" target="_blank" class="button">
+                    Add New
+                </a>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Timespan</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for src in mapsources %}
+                            <tr>
+                                <td>{{ src.name }}</td>
+                                <td>{{ src.valid_from }} &#x2192; {{ src.valid_to }}</td>
+                                <td style="width:50px"><a href="{% url 'source' src.pk %}" target="_blank" class="button small">View</a></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div id="texts-tab" class="tab-content box">
+            <div style="width:100%; text-align:right">
+                <a href="{% url 'textsource_add' %}" target="_blank" class="button">
+                    Add New
+                </a>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Timespan</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for src in textsources %}
+                            <tr>
+                                <td>{{ src.name }}</td>
+                                <td>{{ src.valid_from }} &#x2192; {{ src.valid_to }}</td>
+                                <td style="width:50px"><a href="{% url 'source' src.pk %}" target="_blank" class="button small">View</a></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // init easytabs
+        $('#sources').easytabs({animate:false});
+    </script>
+
+    <br>
 
     <h3>Build History:</h3>
 
