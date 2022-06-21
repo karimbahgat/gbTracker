@@ -22,17 +22,17 @@ API-only for receiving, storing, and sharing data on boundary changes.
 - `boundaryCreated`: No boundary existed in that area previously.
   - event: The temporal event during which this change occurred.
   - boundary_ref
-  - after: Reference to a boundarySnapshot after creation (optional).
+  - snapshot: Reference to a boundarySnapshot after creation (optional).
 - `boundaryTransfer`: Defines the transfer of territory between a pair of boundaries.
   - event: The temporal event during which this change occurred.
   - from_boundary
   - to_boundary
-  - before: Reference to a boundarySnapshot before the change (req if going backward).
-  - after: Reference to a boundarySnapshot after the change (req if going forward).
+  - snapshot_before: Reference to a boundarySnapshot of from_boundary before the change (req if going backward).
+  - snapshot_after: Reference to a boundarySnapshot of from_boundary after the change (req if going forward).
 - `boundaryDissolved`: Boundary ceases to exist.
   - event: The temporal event during which this change occurred.
   - boundary_ref
-  - before: Reference to a boundarySnapshot prior to dissolving (optional).
+  - snapshot: Reference to a boundarySnapshot prior to dissolving (optional).
 - `nameChange`: A name changing.
 - `codeChange`: A change in a boundary identifier.
 - `parentChange`: A change in the parent boundary. 

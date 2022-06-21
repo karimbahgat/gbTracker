@@ -97,3 +97,26 @@ class BoundarySnapshot(models.Model):
     event = models.ForeignKey('Event', related_name='snapshots', on_delete=models.CASCADE)
     boundary_ref = models.ForeignKey('BoundaryReference', related_name='snapshots', on_delete=models.CASCADE)
     geom = GeometryField()
+
+#class BoundaryCreated(models.Model):
+#    event = models.ForeignKey('Event', related_name='changes_created', on_delete=models.CASCADE)
+#    boundary_ref = models.ForeignKey('BoundaryReference', related_name='+', on_delete=models.CASCADE)
+
+#class BoundaryTransfer(models.Model):
+#    event = models.ForeignKey('Event', related_name='changes_transfer', on_delete=models.CASCADE)
+#    from_boundary = models.ForeignKey('BoundaryReference', related_name='+', on_delete=models.CASCADE)
+#    to_boundary = models.ForeignKey('BoundaryReference', related_name='+', on_delete=models.CASCADE)
+#    from_boundary_before = models.ForeignKey('BoundaryReference', related_name='+', on_delete=models.PROTECT,
+#                                            blank=True, null=True)
+#    from_boundary_after = models.ForeignKey('BoundaryReference', related_name='+', on_delete=models.PROTECT,
+#                                              blank=True, null=True)
+
+#class BoundaryDissolved(models.Model):
+#    event = models.ForeignKey('Event', related_name='changes_dissolved', on_delete=models.CASCADE)
+#    boundary_ref = models.ForeignKey('BoundaryReference', related_name='+', on_delete=models.CASCADE)
+
+#class NameChange
+
+#class CodeChange
+
+#class ParentChange??? 
