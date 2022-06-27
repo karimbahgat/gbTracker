@@ -92,6 +92,10 @@ class CodeType(models.Model):
 class Event(models.Model):
     date_start = models.CharField(max_length=16)
     date_end = models.CharField(max_length=16)
+    #source = models.ForeignKey('BoundarySource', related_name='events', on_delete=models.CASCADE, 
+    #                            blank=True, null=True)
+    #type = models.CharField(choices=['Split','Merge','Snapshot'])
+    #note = models.TextField() # this is where we describe and quote the event, eg many merging into one
 
 class BoundarySnapshot(models.Model):
     event = models.ForeignKey('Event', related_name='snapshots', on_delete=models.CASCADE)
@@ -101,19 +105,21 @@ class BoundarySnapshot(models.Model):
 #class BoundaryCreated(models.Model):
 #    event = models.ForeignKey('Event', related_name='changes_created', on_delete=models.CASCADE)
 #    boundary_ref = models.ForeignKey('BoundaryReference', related_name='+', on_delete=models.CASCADE)
+#    boundary_after = models.ForeignKey('BoundarySnapshot', related_name='+', on_delete=models.SET_NULL)
 
 #class BoundaryTransfer(models.Model):
 #    event = models.ForeignKey('Event', related_name='changes_transfer', on_delete=models.CASCADE)
 #    from_boundary = models.ForeignKey('BoundaryReference', related_name='+', on_delete=models.CASCADE)
 #    to_boundary = models.ForeignKey('BoundaryReference', related_name='+', on_delete=models.CASCADE)
-#    from_boundary_before = models.ForeignKey('BoundaryReference', related_name='+', on_delete=models.PROTECT,
+#    from_boundary_before = models.ForeignKey('BoundarySnapshot', related_name='+', on_delete=models.SET_NULL,
 #                                            blank=True, null=True)
-#    from_boundary_after = models.ForeignKey('BoundaryReference', related_name='+', on_delete=models.PROTECT,
+#    from_boundary_after = models.ForeignKey('BoundarySnapshot', related_name='+', on_delete=models.SET_NULL,
 #                                              blank=True, null=True)
 
 #class BoundaryDissolved(models.Model):
 #    event = models.ForeignKey('Event', related_name='changes_dissolved', on_delete=models.CASCADE)
 #    boundary_ref = models.ForeignKey('BoundaryReference', related_name='+', on_delete=models.CASCADE)
+#    boundary_before = models.ForeignKey('BoundarySnapshot', related_name='+', on_delete=models.SET_NULL)
 
 #class NameChange
 

@@ -23,8 +23,15 @@ def datasource_import_all(request):
     large amounts of data'''
     sources = models.BoundarySource.objects.all()
     for src in sources:
+        if request.GET.get('replace','false').lower() == 'false':
+            if src.boundary_refs.all().count() > 0:
+                # don't reimport populated sources if replace is false
+                continue
         print('importing from', src)
-        datasource_import(request, src.pk)
+        try:
+            datasource_import(request, src.pk)
+        except Exception as err:
+            print('error importing source:', err)
 
 @csrf_exempt
 def datasource_import(request, pk):
@@ -169,16 +176,93 @@ def datasource_import(request, pk):
         # redirect
         return redirect('source', pk)
 
+def download_file(urlpath):
+    from urllib.request import urlretrieve
+    _,ext = os.path.splitext(urlpath)
+    path,headers = urlretrieve(urlpath)
+    os.rename(path, path+ext)
+    return path+ext
+
+def detect_shapefile_encoding(path):
+    print('detecting encoding')
+    encoding = None
+
+    # look for cpg file
+    if '.zip' in path:
+        # inside zipfile
+        from zipfile import ZipFile
+        zippath,relpath = path.split('.zip')[:2]
+        zippath += '.zip'
+        with ZipFile(zippath) as archive:
+            relpath = os.path.splitext(relpath)[0]
+            relpath = relpath.lstrip('/\\')
+            for ext in ['.cpg','.CPG']:
+                try: 
+                    with archive.open(relpath+ext) as cpg:
+                        encoding = cpg.read().decode('utf8')
+                    break
+                except:
+                    pass
+    else:
+        # normal path
+        basepath = os.path.splitext(path)[0]
+        for ext in ['.cpg','.CPG']:
+                try: 
+                    with archive.open(relpath+ext) as cpg:
+                        encoding = cpg.read().decode('utf8')
+                    break
+                except:
+                    pass
+    
+    # not sure about the format of expected names
+    # so just check for some common ones
+    if encoding:
+        print('found',encoding)
+        if '1252' in encoding:
+            return 'latin1' # 1252 doesn't always work, maybe meant latin1 which is almost the same
+            #return 'cp1252'
+
+    # autotry diff encodings
+    #encodings = ['utf8','latin']
+    #for enc in encodings:
+    #    try:
+    #        # try read all records
+    #        for r in reader.iterRecords():
+    #            pass
+    #        # read was successful, use this encoding
+    #        return enc
+    #    except UnicodeDecodeError:
+    #        continue
+
 def parse_data(**params):
     # read shapefile from temporary zipfile
     # (name_field is a list of one or more name_field inputs from a form)
+
+    # download data if needed
+    path = params['input_path']
+    if path.startswith('http'):
+        urlpath = path
+        if '.zip' in urlpath:
+            # only download the highest level zipfile
+            urlpath,relpath = urlpath.split('.zip')[:2]
+            urlpath += '.zip'
+            path = download_file(urlpath)
+            params['input_path'] = path + relpath
+        else:
+            raise Exception('External input data must be inside zipfile')
 
     # get shapefile encoding
     reader_opts = {}
     encoding = params.get('encoding', None)
     if encoding:
+        # manually specified
         reader_opts['encoding'] = encoding
-
+    else:
+        # otherwise try to autodetect
+        encoding = detect_shapefile_encoding(params['input_path'])
+        if encoding:
+            reader_opts['encoding'] = encoding
+        
     # define nested shapefile groups reading
     def iter_shapefile_groups(reader, group_field=None, subset=None):
         if group_field:
