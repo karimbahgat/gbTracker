@@ -21,9 +21,15 @@ def datasets(request):
 def datasource_import_all(request):
     '''Not meant for users, only for internal use to quickly load
     large amounts of data'''
-    sources = models.BoundarySource.objects.all()
+    params = request.GET.dict()
+    print(params)
+    replace = params.pop('replace','false').lower()
+    if len(params):
+        sources = models.BoundarySource.objects.filter(**params)
+    else:
+        sources = models.BoundarySource.objects.all()
     for src in sources:
-        if request.GET.get('replace','false').lower() == 'false':
+        if replace == 'false':
             if src.boundary_refs.all().count() > 0:
                 # don't reimport populated sources if replace is false
                 continue
@@ -325,7 +331,7 @@ def parse_data(**params):
     # parse nested structure
     print('parsing shapefile nested structure')
     data = iter_nested_shapefile_groups(reader, params['levels'])
-    print(data)
+    #print(data)
 
     return reader, data
 
@@ -353,7 +359,7 @@ def add_to_db(reader, common, entries, parent=None):
     source = common['source']
     event = common['event']
     for entry in entries:
-        print(entry['item'])
+        #print(entry['item'])
 
         groupval = entry['item']['id']
         level = entry['item']['level']
@@ -386,7 +392,7 @@ def add_to_db(reader, common, entries, parent=None):
                         for i in subset]
                 geom = dissolve(geoms) #, dissolve_buffer)
             # create ref
-            ref = models.BoundaryReference(parent=parent, source=source)
+            ref = models.BoundaryReference(parent=parent, source=source, level=level)
             ref.save()
             ref.names.add(name_obj)
             # create snapshot

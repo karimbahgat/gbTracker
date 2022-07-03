@@ -35,9 +35,9 @@ def home(request):
                 agg = BoundarySource.objects.filter(**filter_kwargs).aggregate(mindate=Min('boundary_refs__snapshots__event__date_start'), maxdate=Max('boundary_refs__snapshots__event__date_end'))
                 info = {'name':country, 'level':lvl, 'sources':sources}
                 info.update(agg)
-                print(info)
+                #print(info)
                 levels.append(info)
-            print(levels)
+            #print(levels)
             countries.append(levels)
         countries_geoj = json.dumps(countries_geoj)
     else:

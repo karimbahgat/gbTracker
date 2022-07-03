@@ -104,6 +104,47 @@ def api_track(request):
     return JsonResponse(results)
 
 
+def get_boundary_refs(country, level):
+    #    SELECT r.id, 0
+    #    FROM changeManager_boundaryReference AS r, changeManager_boundaryName AS n
+    #    WHERE n.boundary_ref_id = r.id 
+    #    AND name = '%s'
+    #    AND level = 0
+
+    # if using hardcoded levels need to set to orig.level
+    # if using dynamic tree level need to set to current.level+1
+    sql = '''
+    WITH cte(id, level)
+    AS (
+        SELECT "changeManager_boundaryreference".id, 0
+        FROM "changeManager_boundaryreference" INNER JOIN "changeManager_boundaryreference_names" ON ("changeManager_boundaryreference"."id" = "changeManager_boundaryreference_names"."boundaryreference_id") INNER JOIN "changeManager_boundaryname" ON ("changeManager_boundaryreference_names"."boundaryname_id" = "changeManager_boundaryname"."id") 
+        WHERE "changeManager_boundaryname"."name" = %s
+        AND level = 0
+
+        UNION ALL
+
+        SELECT orig.id, current.level + 1
+        FROM changeManager_boundaryReference AS orig
+        INNER JOIN cte AS current
+        ON current.id = orig.parent_id
+    )
+    SELECT *
+    FROM cte
+    WHERE level = %s
+    '''
+    #sql = '''
+    #    SELECT "changeManager_boundaryreference".id, 0
+    #    FROM "changeManager_boundaryreference" INNER JOIN "changeManager_boundaryreference_names" ON ("changeManager_boundaryreference"."id" = "changeManager_boundaryreference_names"."boundaryreference_id") INNER JOIN "changeManager_boundaryname" ON ("changeManager_boundaryreference_names"."boundaryname_id" = "changeManager_boundaryname"."id") 
+    #    WHERE "changeManager_boundaryname"."name" = %s
+    #    AND level = 0
+    #'''
+    sqlparams = [country,
+                level,
+                ]
+    results = models.BoundaryReference.objects.raw(sql, sqlparams)
+    return results
+
+
 def build(request):
     '''Builds and increment boundary changes one step at a time.
     
@@ -119,6 +160,23 @@ def build(request):
         If name diff is above some thresh, add namechange event. 
     '''
     if request.method == 'GET':
+        # get all boundary refs at level = level, with a root parent whose name = country
+        #res = get_boundary_refs(request.GET['country'], int(request.GET['level']))
+        #print(res.query)
+        #for r in res:
+        #    print(r.source.name, r.parent_id, r.id, r.level, r.names.all()[0].name)
+        #fdsafas
+
+
+        # next: add sql to fetch events from the boundaryrefs
+
+
+        # next: add sql to fetch all sources from the boundaryrefs
+
+
+        # .....update below......
+
+
         # modify get params to fetch events
         params = request.GET.copy()
         params = {'snapshots__'+key:val 
