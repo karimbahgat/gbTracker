@@ -92,9 +92,9 @@ class CodeType(models.Model):
 class Event(models.Model):
     date_start = models.CharField(max_length=16)
     date_end = models.CharField(max_length=16)
-    #source = models.ForeignKey('BoundarySource', related_name='events', on_delete=models.CASCADE, 
-    #                            blank=True, null=True)
-    #type = models.CharField(choices=['Split','Merge','Snapshot'])
+    source = models.ForeignKey('BoundarySource', related_name='events', on_delete=models.CASCADE, 
+                                blank=True, null=True)
+    #type = models.CharField(max_length=20, choices=['Split','Merge','Snapshot'])
     #note = models.TextField() # this is where we describe and quote the event, eg many merging into one
 
 class BoundarySnapshot(models.Model):

@@ -1194,7 +1194,7 @@
             };
         };
         // otherwise jump to first date
-        return events[0].date_start;
+        return dates[0];
     };
 
     function findNextDate(date) {
@@ -1205,7 +1205,7 @@
             };
         };
         // otherwise jump to last date
-        return events[events.length-1].date_end;
+        return dates[dates.length-1];
     };
 
     function prevDate() {

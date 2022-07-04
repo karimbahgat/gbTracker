@@ -104,26 +104,20 @@ def api_track(request):
     return JsonResponse(results)
 
 
-def get_boundary_refs(country, level):
-    #    SELECT r.id, 0
-    #    FROM changeManager_boundaryReference AS r, changeManager_boundaryName AS n
-    #    WHERE n.boundary_ref_id = r.id 
-    #    AND name = '%s'
-    #    AND level = 0
-
+def get_boundary_refs_sql(country, level):
     # if using hardcoded levels need to set to orig.level
     # if using dynamic tree level need to set to current.level+1
     sql = '''
-    WITH cte(id, level)
+    WITH cte(id, level, source_id)
     AS (
-        SELECT "changeManager_boundaryreference".id, 0
+        SELECT "changeManager_boundaryreference".id, 0, "changeManager_boundaryreference".source_id
         FROM "changeManager_boundaryreference" INNER JOIN "changeManager_boundaryreference_names" ON ("changeManager_boundaryreference"."id" = "changeManager_boundaryreference_names"."boundaryreference_id") INNER JOIN "changeManager_boundaryname" ON ("changeManager_boundaryreference_names"."boundaryname_id" = "changeManager_boundaryname"."id") 
         WHERE "changeManager_boundaryname"."name" = %s
         AND level = 0
 
         UNION ALL
 
-        SELECT orig.id, current.level + 1
+        SELECT orig.id, orig.level, orig.source_id
         FROM changeManager_boundaryReference AS orig
         INNER JOIN cte AS current
         ON current.id = orig.parent_id
@@ -132,17 +126,34 @@ def get_boundary_refs(country, level):
     FROM cte
     WHERE level = %s
     '''
-    #sql = '''
-    #    SELECT "changeManager_boundaryreference".id, 0
-    #    FROM "changeManager_boundaryreference" INNER JOIN "changeManager_boundaryreference_names" ON ("changeManager_boundaryreference"."id" = "changeManager_boundaryreference_names"."boundaryreference_id") INNER JOIN "changeManager_boundaryname" ON ("changeManager_boundaryreference_names"."boundaryname_id" = "changeManager_boundaryname"."id") 
-    #    WHERE "changeManager_boundaryname"."name" = %s
-    #    AND level = 0
-    #'''
+    return sql
     sqlparams = [country,
                 level,
                 ]
     results = models.BoundaryReference.objects.raw(sql, sqlparams)
     return results
+
+
+def get_boundary_refs_tree_sql():
+    # if using hardcoded levels need to set to orig.level
+    # if using dynamic tree level need to set to current.level+1
+    sql = '''
+    WITH cte(id, level, source_id)
+    AS (
+        SELECT "changeManager_boundaryreference".id, 0, "changeManager_boundaryreference".source_id
+        FROM "changeManager_boundaryreference" INNER JOIN "changeManager_boundaryreference_names" ON ("changeManager_boundaryreference"."id" = "changeManager_boundaryreference_names"."boundaryreference_id") INNER JOIN "changeManager_boundaryname" ON ("changeManager_boundaryreference_names"."boundaryname_id" = "changeManager_boundaryname"."id") 
+        WHERE "changeManager_boundaryname"."name" = %s
+        AND level = 0
+
+        UNION ALL
+
+        SELECT orig.id, orig.level, orig.source_id
+        FROM changeManager_boundaryReference AS orig
+        INNER JOIN cte AS current
+        ON current.id = orig.parent_id
+    )
+    '''
+    return sql
 
 
 def build(request):
@@ -161,35 +172,35 @@ def build(request):
     '''
     if request.method == 'GET':
         # get all boundary refs at level = level, with a root parent whose name = country
+
+        # get core recursive sql for boundary refs
         #res = get_boundary_refs(request.GET['country'], int(request.GET['level']))
         #print(res.query)
         #for r in res:
         #    print(r.source.name, r.parent_id, r.id, r.level, r.names.all()[0].name)
         #fdsafas
-
-
-        # next: add sql to fetch events from the boundaryrefs
-
-
-        # next: add sql to fetch all sources from the boundaryrefs
-
-
-        # .....update below......
-
-
-        # modify get params to fetch events
-        params = request.GET.copy()
-        params = {'snapshots__'+key:val 
-                for key,val in request.GET.items()
-                if not key.endswith('_source')}
-        print(params)
+        country,level = request.GET['country'], int(request.GET['level'])
+        refs_sql = get_boundary_refs_sql(country, level)
 
         # fetch events
-        events = models.Event.objects.filter(**params).distinct()
-        print(events)
+        # add sql to fetch events from the boundaryrefs
+        # should be ref->source->events
+        # TODO: ACTUALLY should be ref->snapshot->event
+        sql = '''
+        WITH refs AS (SELECT * FROM ({}))
+        SELECT DISTINCT "changeManager_event".*
+        FROM "changeManager_event"
+        INNER JOIN "refs" ON ("refs"."source_id" = "changeManager_event"."source_id")
+        '''.format(refs_sql)
+        sqlparams = [country,
+                    level]
+        events = list(models.Event.objects.raw(sql, sqlparams))
+        #for ev in events:
+        #    print(model_to_dict(ev))
+        #fdaadsfsdfs
         from datetime import date
         date_starts = [event.date_start for event in events]
-        date_ends = [event.date_end for event in events]
+        date_ends = [event.date_end for event in events]    
 
         # calc current date (for now just setting to start of all events)
         # used for ordering the events
@@ -205,7 +216,7 @@ def build(request):
             event.date_end_perc = (end - mindate_num) / (maxdate_num - mindate_num) * 100
             event.date_dur_perc = event.date_end_perc - event.date_start_perc
             mid = (start + end) / 2.0
-            event.date_dist = abs(date_now-mid)
+            event.date_dist = abs(date_now-start) #-mid
         key = lambda e: e.date_dist
         events = sorted(events, key=key)
 
@@ -228,18 +239,21 @@ def build(request):
         # get available levels
         levels = [0,1,2] # hardcoded for now
 
-        # get current country and level
-        key = [key for key in request.GET.keys()
-                if key.startswith('boundary_ref__')][0]
-        level = key.count('parent__') # each __parent__ represents one level up
-        country = request.GET[key]
-
         # get all sources
-        params = request.GET.copy()
-        params = {key.replace('boundary_ref__','boundary_refs__'):val 
-                for key,val in request.GET.items()
-                if not key.endswith('_source')}
-        sources = models.BoundarySource.objects.filter(**params).distinct()
+        # add sql to fetch all sources from the boundaryrefs
+        sql = '''
+        WITH refs AS (SELECT * FROM ({}))
+        SELECT DISTINCT "changeManager_boundarysource".*
+        FROM "changeManager_boundarysource"
+        INNER JOIN "refs" ON ("refs"."source_id" = "changeManager_boundarysource"."id")
+        '''.format(refs_sql)
+        sqlparams = [country,
+                    level]
+        sources = list(models.BoundarySource.objects.raw(sql, sqlparams))
+        #for src in sources:
+        #    print(model_to_dict(src))
+        #fdaadsfsdfs
+        sources = sorted(sources, key=lambda s: s.valid_from)
         datasources = [s for s in sources if s.type == 'DataSource']
         mapsources = [s for s in sources if s.type == 'MapSource']
         textsources = [s for s in sources if s.type == 'TextSource']
@@ -249,36 +263,6 @@ def build(request):
                     'datasources':datasources, 'mapsources':mapsources, 'textsources':textsources,
                     'current_country':country, 'current_level':level}
         print(context)
-        return render(request, 'build.html', context)
-
-
-
-        # initial anchor points (snapshot ids) chosen
-        # display original snapshot including prev/next snapshots/changes
-        snapshot_ids = request.GET['anchors']
-        context = {'boundaries':[]}
-        for pk in snapshot_ids.split(','):
-            snap = models.BoundarySnapshot.objects.get(pk=pk)
-            # get geometry
-            geom = snap.geom.__geo_interface__
-            # get prev changes
-            url = 'http://127.0.0.1:8000' + reverse('api_suggest_previous_changes')
-            params = {'geometry':json.dumps(geom),
-                    'date':snap.event.date_end,
-                    'match_name':snap.boundary_ref.full_name(),
-                    'match_thresh':0.5} # minimum 50% name match
-            resp = requests.post(url,
-                                data=params)
-            prev = json.loads(resp.content)
-            # get next changes
-            #nxt = requests.post(reverse('api_suggest_next_changes'),
-            #                    data={'geometry':geoj})
-            # add to list
-            geoj = {'type':'Feature', 'geometry':geom}
-            item = {'object':snap, 'geojson':json.dumps(geoj),
-                    'prev':prev} #, 'next':nxt}
-            context['boundaries'].append( item )
-
         return render(request, 'build.html', context)
 
     elif request.method == 'POST':
@@ -333,12 +317,49 @@ def api_filter(request):
     model = apps.get_model(model_name)
     # get non-filter values
     distinct = params.pop('distinct', False)
+    country = params.pop('country', None)
+    level = params.pop('level', None)
+    level = int(level)
     # filter results
     results = model.objects.filter(**params)
-    print(results.count(), results)
+    #print(results.count(), results)
     # post processing
     if distinct:
         results = results.distinct()
+    # boundary ref recursive country + level filter
+    # NOTE: this is really hacky, but should work for now
+    if model_name in ('changeManager.BoundaryReference','changeManager.BoundarySnapshot'):
+        # retrieve using custom sql and raw instead
+        if country != None:
+            # get sql and params from filter() methods
+            sql_main, sql_args_main = results.query.sql_with_params()
+            # generate recursive sql for country and level
+            sql_refs = get_boundary_refs_tree_sql()
+            sql_refs_args = [country]
+            sql_refs += 'SELECT * FROM cte'
+            if level != None:
+                sql_refs += ' WHERE level = %s'
+                sql_refs_args.append( level )
+            # combine filter (main) and raw (refs) queries
+            if model_name == 'changeManager.BoundaryReference':
+                sql = '''
+                WITH refs AS (SELECT * FROM ({}))
+                SELECT main.* FROM ({}) AS main
+                INNER JOIN refs ON (main.id = refs.id)
+                '''.format(sql_refs, sql_main)
+            elif model_name == 'changeManager.BoundarySnapshot':
+                sql = '''
+                WITH refs AS (SELECT * FROM ({}))
+                SELECT main.* FROM ({}) AS main
+                INNER JOIN refs ON (main.boundary_ref_id = refs.id)
+                '''.format(sql_refs, sql_main)
+            # combine args
+            sql_args = list(sql_refs_args) + list(sql_args_main)
+            # execute
+            #print(999,sql_args,sql)
+            results = model.objects.raw(sql, sql_args)
+            #for r in results:
+            #    print(model_to_dict(r))
     # serialize to python
     serialized = CustomSerializer().serialize(queryset=results)
     #print(repr(serialized))

@@ -122,7 +122,7 @@ def datasource_import(request, pk):
             end = max(end1, end2)
 
             # create event
-            event = models.Event(date_start=start, date_end=end)
+            event = models.Event(date_start=start, date_end=end, source=source)
             event.save()
 
             # get source
@@ -300,6 +300,9 @@ def parse_data(**params):
 
     def iter_nested_shapefile_groups(reader, level_defs, level=0, subset=None):
         # iterate through each group, depth first
+        # NOTE: level arg is only the index as we iterate through the entrise in the level_defs list
+        # ...and does not necessarily correspond to the adm level (eg if only adm0 and adm2 is defined).
+        # ...The adm level has to be explicitly defined by level_def['level'].
         data = []
         level_def = level_defs[level]
         group_field = level_def['id_field'] if level > 0 else None # id not required for adm0
@@ -309,7 +312,7 @@ def parse_data(**params):
             #if level == 0 and iso:
             #    groupval = iso3_to_name[iso]
             # item
-            item = {'id':groupval, 'level':level, 
+            item = {'id':groupval, 'level':level_def['level'], 
                     'positions':_subset}
             rec = reader.record(_subset[0], fields=fields)
             item['name'] = level_def['name'] if level_def.get('name', None) else rec[level_def['name_field']]
