@@ -1262,14 +1262,7 @@
     function reloadPage() {
         let country = document.getElementById('country-select').value;
         let level = parseInt(document.getElementById('level-select').value);
-        let paramParts = ['boundary_ref'];
-        for (let i=0; i<level; i++) {
-            console.log(i)
-            paramParts.push('parent');
-        };
-        paramParts.push('names__name');
-        let paramName = paramParts.join('__');
-        let queryString = '?' + paramName + '=' + country;
+        let queryString = '?country=' + country + '&level=' + level;
         let url = "{% url 'build' %}" + queryString;
         console.log(url);
         window.location.href = url;

@@ -66,13 +66,7 @@
                             </td>
                             <td>
                                 {% for countrylevel in countrylevels %}
-                                    {% if countrylevel.level == 0 %}
-                                        <a class="button small" href="{% url 'build' %}?boundary_ref__names__name={{ countrylevel.name }}" target="_blank">Build</a>
-                                    {% elif countrylevel.level == 1 %}
-                                        <a class="button small" href="{% url 'build' %}?boundary_ref__parent__names__name={{ countrylevel.name }}" target="_blank">Build</a>
-                                    {% elif countrylevel.level == 2 %}
-                                        <a class="button small" href="{% url 'build' %}?boundary_ref__parent__parent__names__name={{ countrylevel.name }}" target="_blank">Build</a>
-                                    {% endif %}
+                                    <a class="button small" href="{% url 'build' %}?country={{ countrylevel.name }}&level={{ countrylevel.level }}" target="_blank">Build</a>
                                     <br>
                                 {% endfor %}
                             </td>
