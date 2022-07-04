@@ -586,6 +586,9 @@
 
 <script>
     function getMapData(date) {
+        // init loading
+        initLoading(); 
+        // load initial map data through url
         queryString = window.location.search;
         queryString += '&model=changeManager.BoundarySnapshot';
         queryString += '&event__date_start__lte='+date;
@@ -623,6 +626,11 @@
         let feats = GeoJSONToFeatures(coll);
         mainLayer.getSource().addFeatures(feats);
         map.getView().fit(mainLayer.getSource().getExtent());
+        // update events status
+        let status = document.getElementById('events-status');
+        status.innerText = 'Data loaded successfully'; // indicate loading
+        // turn back on nav buttons
+        updateNavButtons(currentDate);
     };
 
     function updateCurrentBoundaries(coll) {
@@ -698,6 +706,9 @@
     window.fromChangeData = {}; // this is a global var that gets populated
     
     function boundaryCompare(coll) {
+        // update events status
+        let status = document.getElementById('events-status');
+        status.innerText = 'Detecting boundary changes...'; // indicate loading
         // this is the main boundary comparison procedure
         console.log(coll);
         let data1 = JSON.stringify(window.mainData);
@@ -1182,7 +1193,6 @@
         document.getElementById('current-date').style.left = perc + '%';
         document.getElementById('timeperiod').innerText = date;
         updateNavButtons(date);
-        getSnapshotsAtDate(date);
     };
 
     function findPrevDate(date) {
@@ -1211,12 +1221,14 @@
     function prevDate() {
         currentDate = findPrevDate(currentDate);
         setCurrentDate(currentDate);
+        getSnapshotsAtDate(currentDate);
         applyReverseBoundaryChanges();
     };
 
     function nextDate() {
         currentDate = findNextDate(currentDate);
         setCurrentDate(currentDate);
+        getSnapshotsAtDate(currentDate);
         applyForwardBoundaryChanges();
         addHistoryEntry();
     };
@@ -1239,11 +1251,11 @@
         };
     };
 
-    // init main map
-    getMapData(currentDate);
-
     // init current date
     setCurrentDate(currentDate);
+
+    // init main map
+    getMapData(currentDate);
 </script>
 
 <script>
