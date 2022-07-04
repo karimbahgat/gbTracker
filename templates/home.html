@@ -146,13 +146,6 @@
         }),
     });
 
-    // data
-    countryData = {{ countries_geojson|safe }};
-    if (countryData) {
-        feats = new ol.format.GeoJSON().readFeatures(countryData, {dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857'});
-        countryLayer.getSource().addFeatures(feats);
-    };
-
     // map
     var map = new ol.Map({
         target: 'map',
@@ -175,10 +168,6 @@
             zoom: 1
         })
     });
-
-    if (countryData) {
-        map.getView().fit(countryLayer.getSource().getExtent());
-    };
 
     map.on('pointermove', function(evt) {
         // get feat at pointer
@@ -204,6 +193,19 @@
             });
         };
     });
+
+    function loadCountries() {
+        url = "{% static 'data/gb-countries-simple.json' %}";
+        fetch(url).then(resp=>resp.json()).then(data=>addCountriesToMap(data));
+    };
+
+    function addCountriesToMap(data) {
+        feats = new ol.format.GeoJSON().readFeatures(data, {dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857'});
+        countryLayer.getSource().addFeatures(feats);
+        //map.getView().fit(countryLayer.getSource().getExtent());
+    };
+
+    loadCountries();
 
 </script>
 

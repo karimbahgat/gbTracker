@@ -23,6 +23,8 @@ def home(request):
             #    countries_geoj['features'].append(feat)
         countrynames = sorted(countrynames)
         countries = []
+        #aggs = BoundarySource.objects.filter(level=0)
+        #    .values('names__name', 'boundary_ref__level')
         for country in countrynames:
             print(country)
             levels = []

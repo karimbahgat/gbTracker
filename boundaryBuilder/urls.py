@@ -19,11 +19,6 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('track', views.track, name='track'),
-    path('api/track', views.api_track, name='api_track'),
-
-    path('api/filter', views.api_filter, name='api_filter'),
-
     path('build', views.build, name='build'),
-    path('api_suggest_previous_changes', views.api_suggest_previous_changes, name='api_suggest_previous_changes'),
+    path('api/filter', views.api_filter, name='api_filter'),
 ]

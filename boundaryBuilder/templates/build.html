@@ -1075,7 +1075,7 @@
         obj.className = 'button small';
         obj.innerText = 'Zoom';
         let id = f1.id;
-        obj.onclick = function() {zoomToFeat(mainLayer, id)};
+        obj.onclick = function() {highlightFromMatchGroup(id); zoomToFeat(mainLayer, id)};
         buttons.appendChild(obj);
         // loop changes
         changeEntries = document.createElement('div');
