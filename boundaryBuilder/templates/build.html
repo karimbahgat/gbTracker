@@ -359,7 +359,7 @@
         <div id="datasets-tab" class="tab-content box">
             <div style="width:100%; text-align:right">
                 <a href="{% url 'datasource_add' %}" target="_blank" class="button">
-                    Add New
+                    Add Dataset
                 </a>
             </div>
             <div class="table-container">
@@ -386,7 +386,7 @@
         <div id="maps-tab" class="tab-content box">
             <div style="width:100%; text-align:right">
                 <a href="{% url 'mapsource_add' %}" target="_blank" class="button">
-                    Add New
+                    Add Map
                 </a>
             </div>
             <div class="table-container">
@@ -413,7 +413,7 @@
         <div id="texts-tab" class="tab-content box">
             <div style="width:100%; text-align:right">
                 <a href="{% url 'textsource_add' %}" target="_blank" class="button">
-                    Add New
+                    Add Text
                 </a>
             </div>
             <div class="table-container">
@@ -1003,7 +1003,7 @@
         updateNavButtons(currentDate);
     };
 
-    function showFromMatchGroup(id) {
+    function highlightFromMatchGroup(id) {
         // this gets called when clicking a particular from-group
         // clear any existing highlight
         highlightLayer.getSource().clear();
@@ -1039,11 +1039,11 @@
         // zoom
         //zoomToFeat(mainLayer, id);
         // dehighlight after x time
-        setTimeout(function() {
-            highlightLayer.getSource().clear();
-            }, 
-            1000 // 1 seconds
-        );
+        //setTimeout(function() {
+        //    highlightLayer.getSource().clear();
+        //    }, 
+        //    1000 // 1 seconds
+        //);
     };
 
     function zoomToFeat(lyr, id) {
@@ -1073,9 +1073,9 @@
         // zoom button
         obj = document.createElement('button');
         obj.className = 'button small';
-        obj.innerText = 'Show';
+        obj.innerText = 'Zoom';
         let id = f1.id;
-        obj.onclick = function() {showFromMatchGroup(id)};
+        obj.onclick = function() {zoomToFeat(mainLayer, id)};
         buttons.appendChild(obj);
         // loop changes
         changeEntries = document.createElement('div');
@@ -1086,6 +1086,8 @@
             // entry
             entry = document.createElement('div');
             entry.className = 'change-entry';
+            entry.onmouseover = function(){highlightFromMatchGroup(id)};
+            entry.onmouseout = function(){highlightLayer.getSource().clear()};
             changeEntries.appendChild(entry);
             // type
             obj = document.createElement('span');
